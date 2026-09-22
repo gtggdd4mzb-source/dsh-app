@@ -23,12 +23,25 @@
   --text-2: #bdd0dc;
   --text-3: #8ba4b5;
 
+  /* 主题色：这里的值是兜底默认，运行时会由 app.js 按用户选择覆盖。
+     注意不能写成 var(--accent) 自引用 —— 自定义属性引用自身会失效，
+     导致所有 var(--accent) 都取不到值。 */
   --accent: #12c4c9;
+  --accent-2: #0b898d;
   --accent-deep: #0b898d;
   --accent-ink: #04222a;
   --accent-soft: rgba(18, 196, 201, .14);
+  --accent-soft-2: rgba(18, 196, 201, .26);
+  --accent-ring: rgba(18, 196, 201, .52);
+  --accent-glow: rgba(18, 196, 201, .45);
+  --accent-glow-soft: rgba(18, 196, 201, .20);
 
-  /* 用户气泡：深青渐变，白字对比度约 6:1（亮青配白字只有 2.9:1，不可读） */
+  /* 背景光晕：由两个选择色派生 */
+  --blob-a: rgba(18, 196, 201, .30);
+  --blob-b: rgba(60, 132, 210, .26);
+  --blob-c: rgba(11, 137, 141, .22);
+
+  /* 用户气泡：白字对比度约 6:1（亮青配白字只有 2.9:1，不可读） */
   --user-a: #0e7076;
   --user-b: #0a5158;
 
@@ -97,17 +110,17 @@ body {
 .blob-a {
   width: 78vw; height: 78vw;
   top: -26vw; left: -18vw;
-  background: radial-gradient(circle, rgba(18, 196, 201, .30), rgba(18, 196, 201, .06) 55%, transparent 72%);
+  background: radial-gradient(circle, var(--blob-a), transparent 72%);
 }
 .blob-b {
   width: 66vw; height: 66vw;
   top: 24vh; right: -26vw;
-  background: radial-gradient(circle, rgba(60, 132, 210, .26), rgba(60, 132, 210, .05) 55%, transparent 72%);
+  background: radial-gradient(circle, var(--blob-b), transparent 72%);
 }
 .blob-c {
   width: 92vw; height: 92vw;
   bottom: -40vw; left: -12vw;
-  background: radial-gradient(circle, rgba(11, 137, 141, .22), rgba(11, 137, 141, .04) 58%, transparent 74%);
+  background: radial-gradient(circle, var(--blob-c), transparent 74%);
 }
 
 /* ============================================================
@@ -201,7 +214,7 @@ body {
   width: 26px; height: 26px;
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 3px 10px rgba(11, 137, 141, .45), inset 0 1px 0 rgba(255, 255, 255, .35);
+  box-shadow: 0 3px 10px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, .35);
 }
 .brand-mark svg { display: block; width: 100%; height: 100%; }
 
@@ -211,7 +224,7 @@ body {
   padding: 6px 11px;
   border: 1px solid rgba(255, 255, 255, .14);
   border-radius: 999px;
-  background-color: rgba(18, 196, 201, .13);
+  background-color: var(--accent-soft);
   background-image: linear-gradient(160deg, rgba(255, 255, 255, .13), transparent 60%);
   color: var(--text-1);
   font: inherit;
@@ -221,7 +234,7 @@ body {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18);
   transition: background-color .16s, transform .12s;
 }
-.chip:active { background-color: rgba(18, 196, 201, .26); transform: scale(.97); }
+.chip:active { background-color: var(--accent-soft-2); transform: scale(.97); }
 .chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chip svg { width: 13px; height: 13px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; opacity: .75; }
 .chip .dot {
@@ -229,7 +242,7 @@ body {
   width: 6px; height: 6px;
   border-radius: 50%;
   background: var(--accent);
-  box-shadow: 0 0 0 3px rgba(18, 196, 201, .2), 0 0 8px rgba(18, 196, 201, .8);
+  box-shadow: 0 0 0 3px var(--accent-glow-soft), 0 0 8px var(--accent-glow);
 }
 
 .icon-btn {
@@ -394,7 +407,7 @@ body {
   width: 6px; height: 6px;
   border-radius: 50%;
   background: var(--accent);
-  box-shadow: 0 0 0 3px rgba(18, 196, 201, .18), 0 0 8px rgba(18, 196, 201, .7);
+  box-shadow: 0 0 0 3px var(--accent-glow-soft), 0 0 8px var(--accent-glow);
   flex: 0 0 auto;
 }
 .think[open] > summary { border-bottom: 1px solid var(--line-1); }
@@ -481,7 +494,7 @@ body {
   content: "";
   position: absolute; inset: -26px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(18, 196, 201, .34), transparent 68%);
+  background: radial-gradient(circle, var(--accent-glow), transparent 68%);
   z-index: -1;
 }
 .welcome-mark svg {
@@ -496,7 +509,7 @@ body {
   font-weight: 700;
   letter-spacing: .16em;
   text-indent: .16em;
-  text-shadow: 0 1px 12px rgba(18, 196, 201, .3);
+  text-shadow: 0 1px 12px var(--accent-glow);
 }
 .welcome .sub { margin: 0 auto; max-width: 26em; color: var(--text-3); font-size: 14px; line-height: 1.6; }
 
@@ -574,8 +587,8 @@ body {
   transition: border-color .18s, box-shadow .18s;
 }
 .composer-inner:focus-within {
-  border-color: rgba(18, 196, 201, .52);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .2), 0 8px 24px rgba(0, 0, 0, .34), 0 0 0 3px rgba(18, 196, 201, .14);
+  border-color: var(--accent-ring);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .2), 0 8px 24px rgba(0, 0, 0, .34), 0 0 0 3px var(--accent-soft);
 }
 
 #input {
@@ -618,7 +631,7 @@ body {
   background-image: linear-gradient(150deg, var(--accent), var(--accent-deep));
   color: var(--accent-ink);
   cursor: pointer;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 6px 16px rgba(11, 137, 141, .46);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 6px 16px var(--accent-glow);
   transition: transform .12s, opacity .16s, box-shadow .16s;
 }
 .send svg { width: 20px; height: 20px; fill: currentColor; }
@@ -815,8 +828,8 @@ body {
 }
 .field input[type="password"]:focus, .field select:focus {
   outline: 0;
-  border-color: rgba(18, 196, 201, .52);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .16), 0 0 0 3px rgba(18, 196, 201, .14);
+  border-color: var(--accent-ring);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .16), 0 0 0 3px var(--accent-soft);
 }
 .field select {
   appearance: none;
@@ -860,7 +873,7 @@ body {
   color: var(--accent-ink);
   border-color: transparent;
   font-weight: 600;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 6px 18px rgba(11, 137, 141, .4);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 6px 18px var(--accent-glow);
 }
 .btn.ghost { background-color: transparent; background-image: none; }
 .btn.danger { color: #ffc9c6; border-color: rgba(255, 107, 100, .42); }
@@ -894,11 +907,11 @@ body {
   left: 0; top: 0; bottom: 0;
   width: 3px;
   background: var(--accent);
-  box-shadow: 0 0 10px rgba(18, 196, 201, .9);
+  box-shadow: 0 0 10px var(--accent-glow);
   opacity: 0;
   transition: opacity .16s;
 }
-.hist-item.active { border-color: rgba(18, 196, 201, .5); background-color: rgba(26, 68, 92, .62); }
+.hist-item.active { border-color: var(--accent-ring); background-color: rgba(26, 68, 92, .62); }
 .hist-item.active::before { opacity: 1; }
 .hist-copy { flex: 1; min-width: 0; }
 .hist-copy b { display: block; font-weight: 600; font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1009,6 +1022,147 @@ body {
   pointer-events: none;
 }
 
+/* ============================================================
+   主题：品牌图形跟随配色
+   SVG 的 fill 是表现属性，CSS 优先级更高，所以能在这里覆盖
+   ============================================================ */
+.brand-mark svg rect, .avatar svg rect, .welcome-mark svg rect { fill: var(--accent-deep); }
+.brand-mark svg path, .avatar svg path, .welcome-mark svg path { fill: #fff; }
+
+/* ============================================================
+   色板
+   ============================================================ */
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 9px;
+  margin-bottom: 12px;
+}
+.swatch {
+  position: relative;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 13px;
+  cursor: pointer;
+  /* 每个色板直接展示该主题的渐变，选之前就能看到实际配色 */
+  background-image: linear-gradient(140deg, var(--sa), var(--sb));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 4px 12px rgba(0, 0, 0, .34);
+  transition: transform .14s cubic-bezier(.2, .8, .3, 1), border-color .16s;
+}
+.swatch::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(120% 80% at 50% -20%, rgba(255, 255, 255, .35), transparent 60%);
+  pointer-events: none;
+}
+.swatch:active { transform: scale(.9); }
+.swatch.on {
+  border-color: rgba(255, 255, 255, .85);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .4), 0 0 0 3px var(--accent-glow-soft), 0 4px 14px rgba(0, 0, 0, .4);
+  animation: swatchPop .32s cubic-bezier(.2, .9, .3, 1.4);
+}
+@keyframes swatchPop { 0% { transform: scale(.86); } 60% { transform: scale(1.06); } 100% { transform: scale(1); } }
+
+/* 自定义混色：两个系统取色器，任意两色都能搭 */
+.mix-row { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.mix {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
+  border: 1px solid rgba(255, 255, 255, .13);
+  border-radius: var(--r-md);
+  background-color: rgba(18, 50, 71, .46);
+  background-image: linear-gradient(160deg, rgba(255, 255, 255, .08), transparent 62%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .14);
+  cursor: pointer;
+}
+.mix input[type="color"] {
+  flex: 0 0 auto;
+  width: 34px; height: 34px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3);
+}
+.mix input[type="color"]::-webkit-color-swatch-wrapper { padding: 2px; }
+.mix input[type="color"]::-webkit-color-swatch { border: 0; border-radius: 7px; }
+.mix-copy { min-width: 0; }
+.mix-copy b { display: block; font-size: 13.5px; font-weight: 600; }
+.mix-copy small { color: var(--text-3); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+
+/* ============================================================
+   特效
+   ============================================================ */
+
+/* 切换配色时从点击位置向外扩开一整屏。
+   用 clip-path 的圆做扩散，比动渐变位置便宜得多。 */
+.theme-wash {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 40%, var(--wash-color), transparent 70%);
+  animation: wash .85s cubic-bezier(.16, .84, .3, 1) forwards;
+  will-change: clip-path, opacity;
+}
+@keyframes wash {
+  0%   { clip-path: circle(0px at var(--wx) var(--wy)); opacity: .62; }
+  55%  { opacity: .38; }
+  100% { clip-path: circle(155vmax at var(--wx) var(--wy)); opacity: 0; }
+}
+
+/* 背景光晕缓慢流动：三个光斑各自漂移，玻璃后面一直在变，
+   所以透过玻璃看到的颜色也在极缓慢地变化。 */
+@keyframes driftA {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  33%      { transform: translate3d(7vw, 5vh, 0) scale(1.14); }
+  66%      { transform: translate3d(-4vw, 9vh, 0) scale(.94); }
+}
+@keyframes driftB {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  40%      { transform: translate3d(-8vw, -6vh, 0) scale(1.18); }
+  70%      { transform: translate3d(-2vw, 6vh, 0) scale(.92); }
+}
+@keyframes driftC {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1.02); }
+  50%      { transform: translate3d(6vw, -8vh, 0) scale(1.16); }
+}
+.blob-a { animation: driftA 34s ease-in-out infinite; }
+.blob-b { animation: driftB 41s ease-in-out infinite; }
+.blob-c { animation: driftC 29s ease-in-out infinite; }
+.atmos.no-aurora .blob { animation: none; }
+
+/* 品牌标记呼吸辉光 */
+@keyframes breathe {
+  0%, 100% { opacity: .75; transform: scale(.94); }
+  50%      { opacity: 1;   transform: scale(1.08); }
+}
+.welcome-mark::after { animation: breathe 5.5s ease-in-out infinite; }
+
+/* 思考时的小圆点脉动 */
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 3px var(--accent-glow-soft), 0 0 8px var(--accent-glow); }
+  50%      { box-shadow: 0 0 0 5px var(--accent-glow-soft), 0 0 14px var(--accent-glow); }
+}
+.think > summary::before { animation: pulse 1.9s ease-in-out infinite; }
+
+/* 换色时让颜色平滑过渡。
+   注意不要在这里写全局的 transition-property —— 那会覆盖 .send / .chip /
+   .starter 等已经定义好的 `transform .12s`，把按压缩放的跟手反馈变成迟钝动画。
+   渐变背景（background-image）在 CSS 里本来就不参与过渡，所以只处理
+   fill / background-color / border-color 这些真能过渡的属性。 */
+.brand-mark svg rect, .avatar svg rect, .welcome-mark svg rect { transition: fill .38s cubic-bezier(.2, .8, .3, 1); }
+.composer, .bubble, .perm, .code { transition: background-color .3s cubic-bezier(.2, .8, .3, 1), border-color .3s cubic-bezier(.2, .8, .3, 1); }
+
 @media (prefers-reduced-motion: reduce) {
-  * { animation: none !important; transition: none !important; }
+  /* 必须显式列出伪元素：`*` 只匹配元素，匹配不到 ::before / ::after，
+     否则呼吸辉光、思考点脉动、流式光标闪烁在“减弱动态效果”下仍会继续动。 */
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .theme-wash { display: none !important; }
 }

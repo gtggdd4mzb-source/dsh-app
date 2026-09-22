@@ -146,6 +146,29 @@
       </label>
 
       <div class="field">
+        <span class="field-label">主题配色</span>
+        <div class="swatches" id="swatches"></div>
+        <div class="mix-row">
+          <label class="mix">
+            <input type="color" id="color-a" aria-label="主色">
+            <span class="mix-copy"><b>主色</b><small id="mix-a-hex">#12c4c9</small></span>
+          </label>
+          <label class="mix">
+            <input type="color" id="color-b" aria-label="辅色">
+            <span class="mix-copy"><b>辅色</b><small id="mix-b-hex">#0b898d</small></span>
+          </label>
+        </div>
+        <span class="hint" id="theme-hint"></span>
+      </div>
+
+      <div class="field">
+        <span class="field-label">特效</span>
+        <label class="switch"><input type="checkbox" id="aurora-toggle" checked><span>背景光晕缓慢流动</span></label>
+        <label class="switch" style="margin-top:11px"><input type="checkbox" id="fx-toggle" checked><span>切换配色时的扩散动画</span></label>
+        <span class="hint">光晕动画在玻璃后方持续变化，会略微增加耗电；关掉后界面依然保留玻璃质感。系统开启「减弱动态效果」时这两项会自动失效。</span>
+      </div>
+
+      <div class="field">
         <span class="field-label">权限</span>
         <div class="perm-list" id="perm-list"></div>
         <span class="hint">这里是网页能拿到的<b>真实</b>权限。浏览器不可能给网页系统级的"完全权限"——没有文件系统、不能执行命令、读不到其他 App 的数据。需要真正的全权限 agent 能力，只能让手机远程连接你电脑上运行的 DSH。</span>

@@ -112,7 +112,8 @@
   /* ================= 状态 ================= */
 
   var settings = Object.assign(
-    { model: VISION_MODEL, thinking: true, effort: 'high' },
+    { model: VISION_MODEL, thinking: true, effort: 'high',
+      colorA: '#12c4c9', colorB: '#0b898d', aurora: true, fx: true },
     load(LS_SETTINGS, {})
   );
   var apiKey = localStorage.getItem(LS_KEY) || '';
@@ -752,6 +753,168 @@
     }
   }
 
+  /* ================= 主题配色 =================
+   * 用户可以混搭任意两种颜色。但颜色不能直接套用：
+   * 亮色按钮上配白字、亮色气泡上配白字都读不清（亮青 #12c4c9 配白字只有 2.9:1）。
+   * 所以按钮字色与气泡底色都要从所选颜色自动反推，保证对比度达标。 */
+
+  var THEMES = [
+    { id: 'deep',     name: '深海青', a: '#12c4c9', b: '#0b898d' },
+    { id: 'aurora',   name: '极光紫', a: '#a78bfa', b: '#6d5bd0' },
+    { id: 'dusk',     name: '暮色蓝', a: '#5aa9ff', b: '#2f6fd0' },
+    { id: 'mint',     name: '薄荷',   a: '#4fd1a5', b: '#17997a' },
+    { id: 'sunset',   name: '落日橙', a: '#ffb066', b: '#e07a2f' },
+    { id: 'rose',     name: '玫瑰',   a: '#ff8fb1', b: '#d5547e' },
+    { id: 'lava',     name: '熔岩',   a: '#ff7b6b', b: '#c9362c' },
+    { id: 'lemon',    name: '柠檬',   a: '#ffd866', b: '#d9a520' },
+    { id: 'indigo',   name: '靛蓝',   a: '#7c8cff', b: '#4b53c9' },
+    { id: 'graphite', name: '石墨',   a: '#9fb4c4', b: '#5d7386' }
+  ];
+
+  var WHITE = { r: 255, g: 255, b: 255 };
+  var INK = { r: 4, g: 22, b: 30 };
+
+  function hexToRgb(hex) {
+    var h = String(hex || '').replace('#', '').trim();
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    if (!/^[0-9a-fA-F]{6}$/.test(h)) return { r: 18, g: 196, b: 201 };
+    return { r: parseInt(h.slice(0, 2), 16), g: parseInt(h.slice(2, 4), 16), b: parseInt(h.slice(4, 6), 16) };
+  }
+  function rgbToHex(c) {
+    return '#' + [c.r, c.g, c.b].map(function (v) {
+      var n = Math.max(0, Math.min(255, Math.round(v)));
+      return (n < 16 ? '0' : '') + n.toString(16);
+    }).join('');
+  }
+  function rgbaCss(c, a) {
+    return 'rgba(' + Math.round(Math.max(0, Math.min(255, c.r))) + ', ' +
+      Math.round(Math.max(0, Math.min(255, c.g))) + ', ' +
+      Math.round(Math.max(0, Math.min(255, c.b))) + ', ' + a + ')';
+  }
+  function lin(v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }
+  function lum(c) { return 0.2126 * lin(c.r) + 0.7152 * lin(c.g) + 0.0722 * lin(c.b); }
+  function contrastOf(c1, c2) {
+    var a = lum(c1), b = lum(c2);
+    return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+  }
+  function scaleRgb(c, f) { return { r: c.r * f, g: c.g * f, b: c.b * f }; }
+
+  // 这个底色上，深字还是浅字更清楚
+  function bestInk(bg) { return contrastOf(bg, WHITE) >= contrastOf(bg, INK) ? WHITE : INK; }
+
+  /* 把底色朝字色的反方向推，直到达到目标对比度。
+   * 任选一个中间调（比如 #808080）时两种字色都到不了 4.5:1，
+   * 所以必须能自动挪底色，否则按钮上的字一定读不清。 */
+  function ensureContrast(bg, target) {
+    var c = bg;
+    for (var i = 0; i < 60; i++) {
+      var ink = bestInk(c);
+      if (contrastOf(c, ink) >= target) return { bg: c, ink: ink };
+      c = ink === WHITE ? scaleRgb(c, 0.93) : scaleRgb(c, 1.07);
+    }
+    return { bg: c, ink: bestInk(c) };
+  }
+
+  // 压暗到指定字色达标（用户气泡用：白字必须 >= 4.5:1）
+  function readableOn(color, ink, target) {
+    var c = color;
+    for (var i = 0; i < 60 && contrastOf(c, ink) < target; i++) c = scaleRgb(c, 0.93);
+    return c;
+  }
+
+  function themeOf(a, b) {
+    return THEMES.filter(function (t) { return t.a === a && t.b === b; })[0] || null;
+  }
+
+  function applyTheme() {
+    var pa = hexToRgb(settings.colorA);
+    var pb = hexToRgb(settings.colorB);
+    var s = document.documentElement.style;
+
+    // 按钮底色可能被自动挪过，保证上面的字一定读得清；用户选的原始色不动
+    var safe = ensureContrast(pa, 4.5);
+    // 气泡：白字必须达标，所以从主色压暗
+    var bubble = readableOn(pa, WHITE, 4.6);
+
+    s.setProperty('--accent', rgbToHex(safe.bg));
+    s.setProperty('--accent-2', rgbToHex(pb));
+    s.setProperty('--accent-deep', rgbToHex(scaleRgb(safe.bg, 0.72)));
+    s.setProperty('--accent-ink', rgbToHex(safe.ink));
+    s.setProperty('--accent-soft', rgbaCss(safe.bg, .14));
+    s.setProperty('--accent-soft-2', rgbaCss(safe.bg, .26));
+    s.setProperty('--accent-ring', rgbaCss(safe.bg, .52));
+    s.setProperty('--accent-glow', rgbaCss(safe.bg, .45));
+    s.setProperty('--accent-glow-soft', rgbaCss(safe.bg, .20));
+    s.setProperty('--user-a', rgbToHex(bubble));
+    s.setProperty('--user-b', rgbToHex(scaleRgb(bubble, 0.78)));
+    s.setProperty('--blob-a', rgbaCss(pa, .30));
+    s.setProperty('--blob-b', rgbaCss(pb, .26));
+    s.setProperty('--blob-c', rgbaCss(scaleRgb(pa, .8), .22));
+
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', rgbToHex(scaleRgb(pa, 0.16)));
+  }
+
+  function renderSwatches() {
+    var box = $('#swatches');
+    if (!box) return;
+    box.innerHTML = THEMES.map(function (t) {
+      var on = (settings.colorA === t.a && settings.colorB === t.b);
+      return '<button class="swatch' + (on ? ' on' : '') + '" data-theme="' + t.id + '" ' +
+        'title="' + esc(t.name) + '" aria-label="' + esc(t.name) + '" ' +
+        'style="--sa:' + t.a + ';--sb:' + t.b + '"></button>';
+    }).join('');
+    box.querySelectorAll('[data-theme]').forEach(function (b) {
+      b.onclick = function (ev) {
+        var t = THEMES.filter(function (x) { return x.id === b.dataset.theme; })[0];
+        if (t) setTheme(t.a, t.b, ev.clientX, ev.clientY);
+      };
+    });
+  }
+
+  function syncThemeControls() {
+    if ($('#color-a')) $('#color-a').value = settings.colorA;
+    if ($('#color-b')) $('#color-b').value = settings.colorB;
+    if ($('#mix-a-hex')) $('#mix-a-hex').textContent = settings.colorA;
+    if ($('#mix-b-hex')) $('#mix-b-hex').textContent = settings.colorB;
+    if ($('#aurora-toggle')) $('#aurora-toggle').checked = !!settings.aurora;
+    if ($('#fx-toggle')) $('#fx-toggle').checked = !!settings.fx;
+    var t = themeOf(settings.colorA, settings.colorB);
+    if ($('#theme-hint')) {
+      $('#theme-hint').textContent = (t ? '当前：' + t.name + '。' : '自定义混搭。') +
+        '按钮上的字色会自动选深或浅、气泡底色会自动压暗，保证文字始终读得清。';
+    }
+  }
+
+  function setTheme(a, b, x, y) {
+    var changed = (a !== settings.colorA || b !== settings.colorB);
+    settings.colorA = a;
+    settings.colorB = b;
+    persistSettings();
+    applyTheme();
+    renderSwatches();
+    syncThemeControls();
+    if (changed && settings.fx) themeWash(x, y, a);
+  }
+
+  /* 切换配色时的扩散动画：从点击位置向外扩开一整屏。
+   * 用 clip-path 的圆做扩散，比动渐变位置便宜得多。 */
+  function themeWash(x, y, color) {
+    if (x == null || y == null) { x = window.innerWidth / 2; y = window.innerHeight * 0.4; }
+    var el = document.createElement('div');
+    el.className = 'theme-wash';
+    el.style.setProperty('--wx', x + 'px');
+    el.style.setProperty('--wy', y + 'px');
+    el.style.setProperty('--wash-color', color);
+    document.body.appendChild(el);
+    setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 900);
+  }
+
+  function applyFx() {
+    var atmos = document.querySelector('.atmos');
+    if (atmos) atmos.classList.toggle('no-aurora', !settings.aurora);
+  }
+
   /* ================= 权限（真实的浏览器权限，不是假开关） ================= */
 
   var PERM_ITEMS = [
@@ -1209,6 +1372,8 @@
     $('#thinking-toggle').checked = settings.thinking;
     $('#effort-select').value = settings.effort;
     $('#effort-field').style.display = settings.thinking ? '' : 'none';
+    renderSwatches();
+    syncThemeControls();
 
     var hasImage = pending.some(function (a) { return a.kind === 'image'; });
     var note = $('#vision-note');
@@ -1417,6 +1582,38 @@
     persistSettings();
   });
 
+  // 主题：两个取色器就是"混搭"的入口，任意两色都能配
+  $('#color-a').addEventListener('input', function () {
+    settings.colorA = $('#color-a').value;
+    persistSettings();
+    applyTheme();
+    renderSwatches();
+    syncThemeControls();
+  });
+  $('#color-a').addEventListener('change', function (e) {
+    if (settings.fx) themeWash(e.clientX, e.clientY, $('#color-a').value);
+  });
+  $('#color-b').addEventListener('input', function () {
+    settings.colorB = $('#color-b').value;
+    persistSettings();
+    applyTheme();
+    renderSwatches();
+    syncThemeControls();
+  });
+  $('#color-b').addEventListener('change', function (e) {
+    if (settings.fx) themeWash(e.clientX, e.clientY, $('#color-b').value);
+  });
+
+  $('#aurora-toggle').addEventListener('change', function () {
+    settings.aurora = $('#aurora-toggle').checked;
+    persistSettings();
+    applyFx();
+  });
+  $('#fx-toggle').addEventListener('change', function () {
+    settings.fx = $('#fx-toggle').checked;
+    persistSettings();
+  });
+
   $('#btn-test').onclick = async function () {
     var status = $('#settings-status');
     var key = $('#key-input').value.trim() || apiKey;
@@ -1458,7 +1655,10 @@
     currentId = null;
     pending = [];
     pendingDoc = null;
-    settings = { model: VISION_MODEL, thinking: true, effort: 'high' };
+    settings = { model: VISION_MODEL, thinking: true, effort: 'high',
+      colorA: '#12c4c9', colorB: '#0b898d', aurora: true, fx: true };
+    applyTheme();
+    applyFx();
     renderPending();
     fillSettings();
     render(true);
@@ -1470,6 +1670,8 @@
   /* ================= 启动 ================= */
 
   fillSettings();
+  applyTheme();
+  applyFx();
   render(true);
   renderHistory();
   autoGrow();
