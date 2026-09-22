@@ -162,12 +162,52 @@
         i++;
         while (i < lines.length && !/^\s*```\s*$/.test(lines[i])) { buf.push(lines[i]); i++; }
         i++;
-        html += '<pre><code data-lang="' + esc(fence[1] || '') + '">' + esc(buf.join('\n')) + '</code></pre>';
+        var lang = (fence[1] || '').toLowerCase();
+        html += '<div class="code">' +
+          '<div class="code-head"><span class="code-lang">' + esc(lang || 'text') + '</span>' +
+          '<button class="code-copy" type="button">复制</button></div>' +
+          '<pre><code>' + esc(buf.join('\n')) + '</code></pre></div>';
         continue;
       }
 
       var head = line.match(/^(#{1,6})\s+(.*)$/);
       if (head) { html += '<h3>' + inline(head[2]) + '</h3>'; i++; continue; }
+
+      // 分隔线：--- / *** / ___（含被空格分开的写法），必须在列表之前判断
+      if (/^\s*(?:-\s*){3,}$/.test(line) || /^\s*(?:\*\s*){3,}$/.test(line) || /^\s*(?:_\s*){3,}$/.test(line)) {
+        html += '<hr>';
+        i++;
+        continue;
+      }
+
+      // 表格：表头行 + |---| 分隔行
+      if (/^\s*\|.*\|\s*$/.test(line) && i + 1 < lines.length && /^\s*\|[\s:|-]+\|\s*$/.test(lines[i + 1])) {
+        var cells = function (s) {
+          return s.trim().replace(/^\||\|$/g, '').split('|').map(function (c) { return c.trim(); });
+        };
+        var thead = cells(lines[i]);
+        i += 2;
+        var rows = [];
+        while (i < lines.length && /^\s*\|.*\|\s*$/.test(lines[i])) { rows.push(cells(lines[i])); i++; }
+        html += '<div class="table-wrap"><table><thead><tr>' +
+          thead.map(function (c) { return '<th>' + inline(c) + '</th>'; }).join('') +
+          '</tr></thead><tbody>' +
+          rows.map(function (r) {
+            return '<tr>' + r.map(function (c) { return '<td>' + inline(c) + '</td>'; }).join('') + '</tr>';
+          }).join('') +
+          '</tbody></table></div>';
+        continue;
+      }
+
+      if (/^>\s?/.test(line)) {
+        var quote = [];
+        while (i < lines.length && /^>\s?/.test(lines[i])) {
+          quote.push(lines[i].replace(/^>\s?/, ''));
+          i++;
+        }
+        html += '<blockquote>' + inline(quote.join('\n')).replace(/\n/g, '<br>') + '</blockquote>';
+        continue;
+      }
 
       if (/^\s*[-*+]\s+/.test(line)) {
         var items = [];
@@ -195,6 +235,9 @@
       while (i < lines.length && lines[i].trim() &&
              !/^\s*```/.test(lines[i]) &&
              !/^(#{1,6})\s+/.test(lines[i]) &&
+             !/^>\s?/.test(lines[i]) &&
+             !/^\s*\|.*\|\s*$/.test(lines[i]) &&
+             !/^\s*(?:-\s*){3,}$/.test(lines[i]) &&
              !/^\s*[-*+]\s+/.test(lines[i]) &&
              !/^\s*\d+[.)]\s+/.test(lines[i])) {
         para.push(lines[i]);
@@ -466,10 +509,15 @@
       if (a.kind === 'image') {
         return '<img class="bubble-img" alt="' + esc(a.name) + '" data-thumb="' + a.id + '">';
       }
-      return '<div class="bubble-doc"><b>' + esc(a.name) + '</b>' +
-        '<small>' + fmtBytes(a.bytes) + ' · 已提取 ' + (a.chars || 0) + ' 字</small></div>';
+      return '<div class="bubble-doc">' + DOC_ICON + '<span class="bd-copy"><b>' + esc(a.name) + '</b>' +
+        '<small>' + fmtBytes(a.bytes) + ' · 已提取 ' + (a.chars || 0) + ' 字</small></span></div>';
     }).join('');
   }
+
+  var MARK_SVG = '<svg viewBox="0 0 256 256"><rect width="256" height="256" rx="64" fill="#0b898d"/>' +
+    '<path d="M91 133c0-27 17-47 40-47 22 0 34 14 34 32 0 23-17 35-38 35h-9v25h-27zm27-4h7c9 0 14-4 14-12 0-7-5-11-13-11h-8z" fill="#fff"/></svg>';
+
+  var DOC_ICON = '<span class="bd-ico"><svg viewBox="0 0 24 24"><path d="M6 3h7l5 5v13H6z"/><path d="M13 3v5h5"/></svg></span>';
 
   function bubbleHtml(msg) {
     var inner = attachmentsHtml(msg.attachments);
@@ -490,7 +538,12 @@
         (hasCode ? '<button class="mini" data-save="' + msg.id + '">存为文件</button>' : '') +
         '</div>';
     }
-    return '<div class="msg ' + msg.role + '"><div class="bubble" data-bubble="' + msg.id + '">' + inner + '</div></div>';
+
+    var avatar = msg.role === 'assistant'
+      ? '<span class="avatar" aria-hidden="true">' + MARK_SVG + '</span>'
+      : '';
+    return '<div class="msg ' + msg.role + '">' + avatar +
+      '<div class="bubble" data-bubble="' + msg.id + '">' + inner + '</div></div>';
   }
 
   // 图片缩略图存在 IndexedDB 里，渲染后异步回填，避免把 base64 塞进 localStorage
@@ -513,19 +566,27 @@
       welcomeNode = document.createElement('section');
       welcomeNode.className = 'welcome';
       var starters = [
-        ['解释一个概念', '用三句话解释量子纠缠，不要用比喻'],
-        ['看图片 / 截图', '请看清我接下来发的图片，先客观描述内容，再回答我的问题。'],
-        ['改我的代码', '我接下来会附上代码文件。请先通读，指出问题并给出完整的修改后代码。'],
-        ['读文档做总结', '我接下来会附上文档。请提炼要点，并列出关键结论。']
+        { ico: 'M12 3.2a6 6 0 0 1 3.7 10.7v3.1H8.3v-3.1A6 6 0 0 1 12 3.2zM9.6 20.2h4.8',
+          b: '解释一个概念', s: '用三句话讲清，不用比喻',
+          p: '用三句话解释量子纠缠，不要用比喻' },
+        { ico: 'M3 5h18v14H3zM3.8 16.6l4.7-4.7 3.8 3.8 2.9-2.9 4.8 4.8',
+          b: '看图 / 截图', s: '客观描述后再回答',
+          p: '请看清我接下来发的图片，先客观描述内容，再回答我的问题。' },
+        { ico: 'M9 8.5l-3.5 3.5L9 15.5M15 8.5l3.5 3.5L15 15.5',
+          b: '改我的代码', s: '通读后给完整修改版',
+          p: '我接下来会附上代码文件。请先通读，指出问题并给出完整的修改后代码。' },
+        { ico: 'M6 3h7l5 5v13H6zM13 3v5h5M8.5 13h7M8.5 16.5h4.5',
+          b: '读文档做总结', s: '提炼要点与结论',
+          p: '我接下来会附上文档。请提炼要点，并列出关键结论。' }
       ];
       welcomeNode.innerHTML =
-        '<div class="welcome-mark" aria-hidden="true">' +
-        '<svg viewBox="0 0 256 256"><rect width="256" height="256" rx="36" fill="#0b898d"/>' +
-        '<path d="M91 133c0-27 17-47 40-47 22 0 34 14 34 32 0 23-17 35-38 35h-9v25h-27zm27-4h7c9 0 14-4 14-12 0-7-5-11-13-11h-8z" fill="#fff"/>' +
-        '</svg></div><h1>DSH</h1><p id="welcome-hint"></p>' +
+        '<div class="welcome-mark" aria-hidden="true">' + MARK_SVG + '</div>' +
+        '<h1>DSH</h1><p class="sub" id="welcome-hint"></p>' +
         '<div class="starters" id="starters" hidden>' +
         starters.map(function (s) {
-          return '<button data-starter="' + esc(s[1]) + '">' + esc(s[0]) + '</button>';
+          return '<button class="starter" data-starter="' + esc(s.p) + '">' +
+            '<span class="s-ico"><svg viewBox="0 0 24 24"><path d="' + s.ico + '"/></svg></span>' +
+            '<b>' + esc(s.b) + '</b><small>' + esc(s.s) + '</small></button>';
         }).join('') + '</div>';
       welcomeNode.querySelectorAll('[data-starter]').forEach(function (b) {
         b.onclick = function () {
@@ -1217,6 +1278,26 @@
 
   var input = $('#input');
   input.addEventListener('input', autoGrow);
+
+  // 代码块复制：用事件委托而不是逐个绑定，
+  // 这样流式输出过程中已经渲染出来的代码块也能立刻复制。
+  $('#messages').addEventListener('click', function (e) {
+    var btn = e.target && e.target.closest ? e.target.closest('.code-copy') : null;
+    if (!btn) return;
+    var box = btn.closest('.code');
+    var code = box && box.querySelector('code');
+    if (code) copy(code.textContent);
+  });
+
+  // 消息区滚动后给顶栏加阴影，强化“内容在下面滚动”的层次
+  (function () {
+    var scroller = $('#messages');
+    var bar = $('#topbar');
+    scroller.addEventListener('scroll', function () {
+      bar.classList.toggle('scrolled', scroller.scrollTop > 6);
+    }, { passive: true });
+  })();
+
   input.addEventListener('keydown', function (e) {
     if (e.key === 'Enter' && !e.shiftKey && !e.isComposing &&
         window.matchMedia('(min-width: 820px)').matches) {

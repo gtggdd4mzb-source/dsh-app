@@ -1,13 +1,6 @@
-/* DSH service worker — 只缓存应用外壳，绝不缓存 API 响应或用户数据。
- *
- * 两个必须注意的点：
- * 1. 跨域请求（api.deepseek.com）一律直连，不拦截、不缓存。
- * 2. 静态资源用 stale-while-revalidate：先返回缓存保证秒开，同时后台拉新版本。
- *    否则一旦改了 app.js 而 sw.js 内容没变，浏览器就不会重装 SW，
- *    用户会被 cache-first 永久锁在旧版本上。
- * 改任何应用文件时，请同时把下面的 CACHE 版本号 +1。
- */
-const CACHE = 'dsh-shell-v4';
+﻿/* DSH service worker 鈥?鍙紦瀛樺簲鐢ㄥ澹筹紝缁濅笉缂撳瓨 API 鍝嶅簲鎴栫敤鎴锋暟鎹€? *
+ * 涓や釜蹇呴』娉ㄦ剰鐨勭偣锛? * 1. 璺ㄥ煙璇锋眰锛坅pi.deepseek.com锛変竴寰嬬洿杩烇紝涓嶆嫤鎴€佷笉缂撳瓨銆? * 2. 闈欐€佽祫婧愮敤 stale-while-revalidate锛氬厛杩斿洖缂撳瓨淇濊瘉绉掑紑锛屽悓鏃跺悗鍙版媺鏂扮増鏈€? *    鍚﹀垯涓€鏃︽敼浜?app.js 鑰?sw.js 鍐呭娌″彉锛屾祻瑙堝櫒灏变笉浼氶噸瑁?SW锛? *    鐢ㄦ埛浼氳 cache-first 姘镐箙閿佸湪鏃х増鏈笂銆? * 鏀逛换浣曞簲鐢ㄦ枃浠舵椂锛岃鍚屾椂鎶婁笅闈㈢殑 CACHE 鐗堟湰鍙?+1銆? */
+const CACHE = 'dsh-shell-v7';
 const SHELL = [
   './',
   './index.html',
@@ -39,10 +32,10 @@ self.addEventListener('fetch', event => {
 
   const url = new URL(req.url);
 
-  // 跨域（API、CDN 等）交给浏览器默认行为，绝不缓存
+  // 璺ㄥ煙锛圓PI銆丆DN 绛夛級浜ょ粰娴忚鍣ㄩ粯璁よ涓猴紝缁濅笉缂撳瓨
   if (url.origin !== self.location.origin) return;
 
-  // 同源导航：网络优先，离线回落缓存外壳
+  // 鍚屾簮瀵艰埅锛氱綉缁滀紭鍏堬紝绂荤嚎鍥炶惤缂撳瓨澶栧３
   if (req.mode === 'navigate') {
     event.respondWith((async () => {
       try {
@@ -58,7 +51,7 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // 同源静态资源：立即给缓存，同时后台更新
+  // 鍚屾簮闈欐€佽祫婧愶細绔嬪嵆缁欑紦瀛橈紝鍚屾椂鍚庡彴鏇存柊
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
     const cached = await cache.match(req, { ignoreSearch: true });
