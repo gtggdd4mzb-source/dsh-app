@@ -113,7 +113,7 @@
 
   var settings = Object.assign(
     { model: VISION_MODEL, thinking: true, effort: 'high',
-      colorA: '#12c4c9', colorB: '#0b898d', aurora: true, fx: true },
+      mode: 'light', colorA: '#2b3a45', colorB: '#5b7484', aurora: true, fx: true },
     load(LS_SETTINGS, {})
   );
   var apiKey = localStorage.getItem(LS_KEY) || '';
@@ -759,16 +759,16 @@
    * 所以按钮字色与气泡底色都要从所选颜色自动反推，保证对比度达标。 */
 
   var THEMES = [
-    { id: 'deep',     name: '深海青', a: '#12c4c9', b: '#0b898d' },
-    { id: 'aurora',   name: '极光紫', a: '#a78bfa', b: '#6d5bd0' },
-    { id: 'dusk',     name: '暮色蓝', a: '#5aa9ff', b: '#2f6fd0' },
-    { id: 'mint',     name: '薄荷',   a: '#4fd1a5', b: '#17997a' },
-    { id: 'sunset',   name: '落日橙', a: '#ffb066', b: '#e07a2f' },
-    { id: 'rose',     name: '玫瑰',   a: '#ff8fb1', b: '#d5547e' },
-    { id: 'lava',     name: '熔岩',   a: '#ff7b6b', b: '#c9362c' },
-    { id: 'lemon',    name: '柠檬',   a: '#ffd866', b: '#d9a520' },
-    { id: 'indigo',   name: '靛蓝',   a: '#7c8cff', b: '#4b53c9' },
-    { id: 'graphite', name: '石墨',   a: '#9fb4c4', b: '#5d7386' }
+    { id: 'white',   name: '素白',   mode: 'light', a: '#2b3a45', b: '#5b7484' },
+    { id: 'paper',   name: '暖白',   mode: 'light', a: '#8a6435', b: '#c19257' },
+    { id: 'sky',     name: '晴空',   mode: 'light', a: '#2563c9', b: '#5aa9ff' },
+    { id: 'sakura',  name: '樱粉',   mode: 'light', a: '#c9487a', b: '#ff9dc0' },
+    { id: 'garden',  name: '青园',   mode: 'light', a: '#12855f', b: '#4fd1a5' },
+    { id: 'night',   name: '墨黑',   mode: 'dark',  a: '#a9bcc9', b: '#66798a' },
+    { id: 'violet',  name: '极光紫', mode: 'dark',  a: '#a78bfa', b: '#6d5bd0' },
+    { id: 'ocean',   name: '深海蓝', mode: 'dark',  a: '#5aa9ff', b: '#2f6fd0' },
+    { id: 'amber',   name: '琥珀',   mode: 'dark',  a: '#ffb066', b: '#e07a2f' },
+    { id: 'crimson', name: '绯红',   mode: 'dark',  a: '#ff7b6b', b: '#c9362c' }
   ];
 
   var WHITE = { r: 255, g: 255, b: 255 };
@@ -826,9 +826,62 @@
     return THEMES.filter(function (t) { return t.a === a && t.b === b; })[0] || null;
   }
 
+  function mixRgb(a, b, t) {
+    return { r: a.r + (b.r - a.r) * t, g: a.g + (b.g - a.g) * t, b: a.b + (b.b - a.b) * t };
+  }
+
+  function rgbToHsl(c) {
+    var r = c.r / 255, g = c.g / 255, b = c.b / 255;
+    var max = Math.max(r, g, b), min = Math.min(r, g, b);
+    var h = 0, s = 0, l = (max + min) / 2, d = max - min;
+    if (d !== 0) {
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+      else if (max === g) h = (b - r) / d + 2;
+      else h = (r - g) / d + 4;
+      h /= 6;
+    }
+    return { h: h, s: s, l: l };
+  }
+
+  function hslToRgb(c) {
+    var hue2rgb = function (p, q, t) {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1 / 6) return p + (q - p) * 6 * t;
+      if (t < 1 / 2) return q;
+      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+      return p;
+    };
+    var l = Math.max(0, Math.min(1, c.l)), s = Math.max(0, Math.min(1, c.s));
+    if (s === 0) return { r: l * 255, g: l * 255, b: l * 255 };
+    var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    var p = 2 * l - q;
+    return {
+      r: hue2rgb(p, q, c.h + 1 / 3) * 255,
+      g: hue2rgb(p, q, c.h) * 255,
+      b: hue2rgb(p, q, c.h - 1 / 3) * 255
+    };
+  }
+
+  function readVar(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  function effectiveMode() {
+    if (settings.mode === 'auto') {
+      return (window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches) ? 'light' : 'dark';
+    }
+    return settings.mode === 'dark' ? 'dark' : 'light';
+  }
+
   function applyTheme() {
     var pa = hexToRgb(settings.colorA);
     var pb = hexToRgb(settings.colorB);
+    var mode = effectiveMode();
+    document.documentElement.dataset.mode = mode;
+    var isLight = mode === 'light';
+
     var s = document.documentElement.style;
 
     // 按钮底色可能被自动挪过，保证上面的字一定读得清；用户选的原始色不动
@@ -847,27 +900,69 @@
     s.setProperty('--accent-glow-soft', rgbaCss(safe.bg, .20));
     s.setProperty('--user-a', rgbToHex(bubble));
     s.setProperty('--user-b', rgbToHex(scaleRgb(bubble, 0.78)));
-    s.setProperty('--blob-a', rgbaCss(pa, .30));
-    s.setProperty('--blob-b', rgbaCss(pb, .26));
-    s.setProperty('--blob-c', rgbaCss(scaleRgb(pa, .8), .22));
+
+    /* 整页染色 —— 这是“换色明显”的关键。
+     * 之前只改强调色，而强调色只出现在按钮和图标那几个小面积上，
+     * 大部分像素是固定的背景与面板，所以看起来几乎没变。
+     *
+     * 取主色的【色相】、保留基线色的【明度】、按比例缩放【饱和度】。
+     * 不能直接混色：深色主色混进白底就是灰，白色主题就不白了。 */
+    var paH = rgbToHsl(pa);
+    var pbH = rgbToHsl(pb);
+    var bgL = rgbToHsl(hexToRgb(readVar('--base-bg'))).l;
+    var srfL = rgbToHsl(hexToRgb(readVar('--base-srf'))).l;
+
+    /* 浅色模式有个本质矛盾：底要白，就不能染太深。
+     * 所以分两层处理 —— 底色只带一点点色相（保住“白”），
+     * 颜色主要交给大面积的柔光斑与玻璃面板去表现。 */
+    var pageSatCap = isLight ? 0.34 : 0.46;
+    var pageSat = Math.min(pageSatCap, paH.s * (isLight ? 0.55 : 0.78));
+    var topL = isLight ? Math.max(0.90, bgL - 0.05) : Math.min(1, bgL + 0.03);
+    var botL = isLight ? Math.max(0.88, bgL - 0.03) : bgL;
+    var c1 = hslToRgb({ h: paH.h, s: pageSat, l: topL });
+    var c2 = hslToRgb({ h: paH.h, s: pageSat * 0.35, l: bgL });
+    var c3 = hslToRgb({ h: pbH.h, s: pageSat * 0.62, l: botL });
+    s.setProperty('--atmos-base', 'linear-gradient(180deg, ' + rgbToHex(c1) + ' 0%, ' +
+      rgbToHex(c2) + ' 55%, ' + rgbToHex(c3) + ' 100%)');
+    s.setProperty('--page-tint', rgbaCss(pa, isLight ? 0.20 : 0.28));
+
+    // 玻璃面板：同一色相、更低饱和度，跟着变但不盖过内容
+    var srfSatCap = isLight ? 0.22 : 0.30;
+    var srfSat = Math.min(srfSatCap, paH.s * (isLight ? 0.45 : 0.52));
+    var glassBase = hslToRgb({ h: paH.h, s: srfSat, l: Math.min(1, srfL + (isLight ? 0.01 : 0.05)) });
+    s.setProperty('--glass-tint', rgbaCss(glassBase, isLight ? 0.80 : 0.60));
+
+    // 助手气泡：更淡一层
+    var bubSat = Math.min(isLight ? 0.16 : 0.24, paH.s * (isLight ? 0.32 : 0.44));
+    var bub = hslToRgb({ h: paH.h, s: bubSat, l: Math.min(1, srfL + (isLight ? 0.02 : 0.12)) });
+    s.setProperty('--srf-tint', rgbaCss(bub, isLight ? 0.92 : 0.74));
+
+    /* 背景光斑：面积最大，是浅色主题里“看得见颜色”的主力。
+     * 浅色底上必须更实才看得出来。 */
+    s.setProperty('--blob-a', rgbaCss(pa, isLight ? 0.60 : 0.55));
+    s.setProperty('--blob-b', rgbaCss(pb, isLight ? 0.52 : 0.48));
+    s.setProperty('--blob-c', rgbaCss(mixRgb(pa, pb, 0.5), isLight ? 0.44 : 0.42));
 
     var meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', rgbToHex(scaleRgb(pa, 0.16)));
+    if (meta) meta.setAttribute('content', rgbToHex(c1));
   }
 
   function renderSwatches() {
     var box = $('#swatches');
     if (!box) return;
     box.innerHTML = THEMES.map(function (t) {
-      var on = (settings.colorA === t.a && settings.colorB === t.b);
+      var on = (settings.colorA === t.a && settings.colorB === t.b && effectiveMode() === t.mode);
+      // 色板做成该主题的迷你预览：外壳是页面底色（区分浅/深），里面是双色渐变
+      var bg = t.mode === 'light' ? '#ffffff' : '#0d2739';
       return '<button class="swatch' + (on ? ' on' : '') + '" data-theme="' + t.id + '" ' +
-        'title="' + esc(t.name) + '" aria-label="' + esc(t.name) + '" ' +
-        'style="--sa:' + t.a + ';--sb:' + t.b + '"></button>';
+        'data-mode="' + t.mode + '" aria-label="' + esc(t.name) + '" ' +
+        'title="' + esc(t.name) + '（' + (t.mode === 'light' ? '浅色' : '深色') + '）" ' +
+        'style="--sa:' + t.a + ';--sb:' + t.b + ';--sw-bg:' + bg + '"><i></i></button>';
     }).join('');
     box.querySelectorAll('[data-theme]').forEach(function (b) {
       b.onclick = function (ev) {
         var t = THEMES.filter(function (x) { return x.id === b.dataset.theme; })[0];
-        if (t) setTheme(t.a, t.b, ev.clientX, ev.clientY);
+        if (t) setTheme(t.a, t.b, ev.clientX, ev.clientY, t.mode);
       };
     });
   }
@@ -879,17 +974,22 @@
     if ($('#mix-b-hex')) $('#mix-b-hex').textContent = settings.colorB;
     if ($('#aurora-toggle')) $('#aurora-toggle').checked = !!settings.aurora;
     if ($('#fx-toggle')) $('#fx-toggle').checked = !!settings.fx;
+    document.querySelectorAll('#mode-seg button').forEach(function (b) {
+      b.classList.toggle('on', b.dataset.mode === settings.mode);
+    });
     var t = themeOf(settings.colorA, settings.colorB);
     if ($('#theme-hint')) {
-      $('#theme-hint').textContent = (t ? '当前：' + t.name + '。' : '自定义混搭。') +
-        '按钮上的字色会自动选深或浅、气泡底色会自动压暗，保证文字始终读得清。';
+      var modeName = { light: '浅色', dark: '深色', auto: '跟随系统' }[settings.mode] || '浅色';
+      $('#theme-hint').textContent = (t ? '当前：' + t.name + '（' + modeName + '）。' : '自定义混搭（' + modeName + '）。') +
+        '所选颜色会混进整页背景与面板，按钮上的字色自动选深或浅、气泡底色自动压暗，保证文字始终读得清。';
     }
   }
 
-  function setTheme(a, b, x, y) {
-    var changed = (a !== settings.colorA || b !== settings.colorB);
+  function setTheme(a, b, x, y, mode) {
+    var changed = (a !== settings.colorA || b !== settings.colorB || (mode && mode !== settings.mode));
     settings.colorA = a;
     settings.colorB = b;
+    if (mode) settings.mode = mode;
     persistSettings();
     applyTheme();
     renderSwatches();
@@ -1614,6 +1714,32 @@
     persistSettings();
   });
 
+  // 明暗模式
+  document.querySelectorAll('#mode-seg button').forEach(function (b) {
+    b.onclick = function (ev) {
+      var same = settings.mode === b.dataset.mode;
+      settings.mode = b.dataset.mode;
+      persistSettings();
+      applyTheme();
+      renderSwatches();
+      syncThemeControls();
+      if (!same && settings.fx) themeWash(ev.clientX, ev.clientY, settings.colorA);
+    };
+  });
+
+  // 「跟随系统」时要响应系统切换
+  if (window.matchMedia) {
+    var schemeMq = matchMedia('(prefers-color-scheme: light)');
+    var onSchemeChange = function () {
+      if (settings.mode !== 'auto') return;
+      applyTheme();
+      renderSwatches();
+      syncThemeControls();
+    };
+    if (schemeMq.addEventListener) schemeMq.addEventListener('change', onSchemeChange);
+    else if (schemeMq.addListener) schemeMq.addListener(onSchemeChange);
+  }
+
   $('#btn-test').onclick = async function () {
     var status = $('#settings-status');
     var key = $('#key-input').value.trim() || apiKey;
@@ -1656,7 +1782,7 @@
     pending = [];
     pendingDoc = null;
     settings = { model: VISION_MODEL, thinking: true, effort: 'high',
-      colorA: '#12c4c9', colorB: '#0b898d', aurora: true, fx: true };
+      mode: 'light', colorA: '#2b3a45', colorB: '#5b7484', aurora: true, fx: true };
     applyTheme();
     applyFx();
     renderPending();

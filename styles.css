@@ -23,6 +23,13 @@
   --text-2: #bdd0dc;
   --text-3: #8ba4b5;
 
+  /* 供 JS 读取的基线色：JS 用它们和用户所选颜色混合，
+     算出整页背景与面板的染色值。浅色模式在下面覆盖这几个变量。 */
+  --base-bg: #061520;
+  --base-srf: #102c3f;
+  --base-srf-2: #143448;
+  --atmos-base: linear-gradient(180deg, #071726 0%, #061520 55%, #050f19 100%);
+
   /* 主题色：这里的值是兜底默认，运行时会由 app.js 按用户选择覆盖。
      注意不能写成 var(--accent) 自引用 —— 自定义属性引用自身会失效，
      导致所有 var(--accent) 都取不到值。 */
@@ -104,7 +111,11 @@ body {
   z-index: -1;
   overflow: hidden;
   pointer-events: none;
-  background: linear-gradient(180deg, #071726 0%, #061520 55%, #050f19 100%);
+  /* 第一层由 JS 按所选颜色染色：这一层覆盖整屏，所以换色时整个界面都会变，
+     而不是只有按钮和图标那几个小面积。 */
+  background:
+    radial-gradient(150% 70% at 50% -14%, var(--page-tint, transparent), transparent 64%),
+    var(--atmos-base, linear-gradient(180deg, #071726 0%, #061520 55%, #050f19 100%));
 }
 .blob { position: absolute; border-radius: 50%; display: block; }
 .blob-a {
@@ -130,7 +141,8 @@ body {
    ============================================================ */
 .glass {
   position: relative;
-  background-color: rgba(10, 34, 50, .52);
+  /* --glass-tint 由 JS 按所选颜色染色，玻璃面板也跟着变 */
+  background-color: var(--glass-tint, rgba(10, 34, 50, .52));
   background-image:
     radial-gradient(130% 92% at 50% -34%, rgba(255, 255, 255, .15), rgba(255, 255, 255, .035) 46%, transparent 72%),
     linear-gradient(165deg, rgba(30, 74, 101, .40), rgba(8, 26, 40, .26));
@@ -298,7 +310,8 @@ body {
   padding: 12px 15px;
   border: 1px solid rgba(255, 255, 255, .11);
   border-radius: var(--r-lg);
-  background-color: rgba(20, 52, 73, .62);
+  /* --srf-tint 由 JS 按所选颜色染色 */
+  background-color: var(--srf-tint, rgba(20, 52, 73, .62));
   background-image:
     radial-gradient(120% 80% at 50% -26%, rgba(255, 255, 255, .10), transparent 62%),
     linear-gradient(160deg, rgba(34, 80, 108, .34), rgba(12, 34, 50, .30));
@@ -1032,6 +1045,37 @@ body {
 /* ============================================================
    色板
    ============================================================ */
+/* 明暗模式切换 */
+.seg {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+  padding: 3px;
+  margin-bottom: 12px;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 12px;
+  background-color: rgba(10, 34, 50, .5);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1);
+}
+.seg button {
+  padding: 9px 6px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-3);
+  font: inherit;
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: background-color .16s, color .16s;
+}
+.seg button:active { background: rgba(255, 255, 255, .08); }
+.seg button.on {
+  background-color: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35);
+}
+
 .swatches {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
@@ -1042,21 +1086,23 @@ body {
   position: relative;
   aspect-ratio: 1;
   padding: 0;
+  display: grid;
+  place-items: center;
   border: 1px solid rgba(255, 255, 255, .16);
   border-radius: 13px;
   cursor: pointer;
-  /* 每个色板直接展示该主题的渐变，选之前就能看到实际配色 */
-  background-image: linear-gradient(140deg, var(--sa), var(--sb));
+  /* 迷你预览：外壳是页面底色（一眼区分浅色 / 深色主题），里面才是双色渐变 */
+  background-color: var(--sw-bg, #0d2739);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 4px 12px rgba(0, 0, 0, .34);
   transition: transform .14s cubic-bezier(.2, .8, .3, 1), border-color .16s;
 }
-.swatch::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: radial-gradient(120% 80% at 50% -20%, rgba(255, 255, 255, .35), transparent 60%);
-  pointer-events: none;
+.swatch i {
+  display: block;
+  width: 62%;
+  height: 62%;
+  border-radius: 8px;
+  background-image: linear-gradient(140deg, var(--sa), var(--sb));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 2px 6px rgba(0, 0, 0, .22);
 }
 .swatch:active { transform: scale(.9); }
 .swatch.on {
@@ -1159,6 +1205,290 @@ body {
    fill / background-color / border-color 这些真能过渡的属性。 */
 .brand-mark svg rect, .avatar svg rect, .welcome-mark svg rect { transition: fill .38s cubic-bezier(.2, .8, .3, 1); }
 .composer, .bubble, .perm, .code { transition: background-color .3s cubic-bezier(.2, .8, .3, 1), border-color .3s cubic-bezier(.2, .8, .3, 1); }
+
+/* ============================================================
+   浅色（白）模式
+   ------------------------------------------------------------
+   作为覆盖层追加，完全不改深色模式的既定行为 ——
+   深色模式已经被多套测试验证过，不该为加浅色去动它。
+   用 html[data-mode="light"] 前缀提高优先级，无需 !important。
+   ============================================================ */
+/* color-scheme 必须按模式显式声明：它决定原生控件（下拉框、滚动条、颜色选择器）
+   与画布默认底色的渲染，不声明就会退成 normal，深色主题下原生控件会渲染成浅色。 */
+html[data-mode="dark"] { color-scheme: dark; }
+
+html[data-mode="light"] {
+  color-scheme: light;
+
+  /* 页面与层次基线：JS 会读这两个值来和主题色混合 */
+  --base-bg: #f2f6f9;
+  --base-srf: #ffffff;
+  --base-srf-2: #ffffff;
+  --atmos-base: linear-gradient(180deg, #ffffff 0%, #f4f8fb 55%, #eaf1f6 100%);
+
+  --text-1: #0c1c26;
+  --text-2: #3d5a6b;
+  --text-3: #6b8798;
+
+  --line-1: rgba(12, 28, 38, .09);
+  --line-2: rgba(12, 28, 38, .15);
+  --line-3: rgba(12, 28, 38, .26);
+
+  --surface-1: #ffffff;
+  --surface-2: #f3f7fa;
+  --surface-3: #e8f0f5;
+
+  /* 浅色下阴影要更淡、扩散更大，否则会显脏 */
+  --shadow-1: 0 1px 2px rgba(15, 40, 58, .08);
+  --shadow-2: 0 6px 18px rgba(15, 40, 58, .10);
+  --shadow-3: 0 18px 46px rgba(15, 40, 58, .18);
+
+  --ok: #0f9b6c;
+  --warn: #b57404;
+  --danger: #d93b34;
+}
+
+/* ---------- 背景 ---------- */
+html[data-mode="light"] body { background: var(--base-bg); }
+
+/* ---------- 玻璃：白面 + 细暗边 + 柔和阴影 ---------- */
+html[data-mode="light"] .glass {
+  background-color: var(--glass-tint, rgba(255, 255, 255, .68));
+  background-image:
+    radial-gradient(130% 92% at 50% -34%, rgba(255, 255, 255, .95), rgba(255, 255, 255, .34) 46%, transparent 72%),
+    linear-gradient(165deg, rgba(255, 255, 255, .78), rgba(240, 246, 250, .52));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .95),
+    inset 0 -1px 0 rgba(12, 28, 38, .05);
+}
+/* 白底上的白色描边看不见，边缘必须改成细暗线 */
+html[data-mode="light"] .glass::after {
+  background: linear-gradient(150deg,
+    rgba(255, 255, 255, 1) 0%,
+    rgba(12, 28, 38, .10) 22%,
+    rgba(12, 28, 38, .04) 54%,
+    rgba(12, 28, 38, .07) 76%,
+    rgba(12, 28, 38, .16) 100%);
+}
+
+/* ---------- 顶栏 ---------- */
+html[data-mode="light"] .topbar.scrolled {
+  background-color: rgba(255, 255, 255, .80);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .95),
+    inset 0 -1px 0 rgba(12, 28, 38, .05),
+    0 10px 30px rgba(15, 40, 58, .10);
+}
+html[data-mode="light"] .topbar::before {
+  background: linear-gradient(to bottom, rgba(242, 246, 249, .72), transparent);
+}
+html[data-mode="light"] .chip {
+  border-color: rgba(12, 28, 38, .14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9), 0 1px 3px rgba(15, 40, 58, .08);
+}
+html[data-mode="light"] .icon-btn { color: var(--text-2); }
+html[data-mode="light"] .icon-btn:active { background: rgba(12, 28, 38, .07); color: var(--text-1); }
+html[data-mode="light"] .brand-mark { box-shadow: 0 3px 10px rgba(15, 40, 58, .22), inset 0 1px 0 rgba(255, 255, 255, .5); }
+
+/* ---------- 消息气泡 ---------- */
+html[data-mode="light"] .bubble {
+  border-color: rgba(12, 28, 38, .10);
+  background-image:
+    radial-gradient(120% 80% at 50% -26%, rgba(255, 255, 255, .9), transparent 62%),
+    linear-gradient(160deg, rgba(255, 255, 255, .6), rgba(240, 246, 250, .4));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .95), 0 4px 14px rgba(15, 40, 58, .08);
+}
+html[data-mode="light"] .msg.user .bubble {
+  border-color: transparent;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28), 0 6px 18px rgba(15, 40, 58, .16);
+}
+html[data-mode="light"] .bubble a { color: #0f6fbe; }
+html[data-mode="light"] .msg.user .bubble a { color: #eaf7ff; }
+html[data-mode="light"] .bubble code {
+  background: rgba(12, 28, 38, .07);
+  border-color: rgba(12, 28, 38, .08);
+}
+html[data-mode="light"] .msg.user .bubble code { background: rgba(0, 0, 0, .18); border-color: transparent; }
+html[data-mode="light"] .bubble blockquote { border-left-color: var(--accent); color: var(--text-2); }
+html[data-mode="light"] .bubble th { color: var(--text-3); }
+html[data-mode="light"] .bubble th, html[data-mode="light"] .bubble td { border-bottom-color: rgba(12, 28, 38, .10); }
+html[data-mode="light"] .bubble-img { border-color: rgba(12, 28, 38, .12); }
+html[data-mode="light"] .bubble-doc { background: rgba(12, 28, 38, .05); border-color: rgba(12, 28, 38, .09); }
+html[data-mode="light"] .avatar { box-shadow: 0 2px 8px rgba(15, 40, 58, .2), inset 0 1px 0 rgba(255, 255, 255, .5); }
+
+/* ---------- 代码块：浅底深字 ---------- */
+html[data-mode="light"] .code {
+  background-color: #f6f9fc;
+  background-image: radial-gradient(120% 70% at 50% -20%, rgba(255, 255, 255, .9), transparent 62%);
+  border-color: rgba(12, 28, 38, .14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9);
+}
+html[data-mode="light"] .code-head {
+  background: rgba(12, 28, 38, .04);
+  border-bottom-color: rgba(12, 28, 38, .09);
+}
+html[data-mode="light"] .code-copy { background: rgba(255, 255, 255, .8); border-color: rgba(12, 28, 38, .16); color: var(--text-2); }
+html[data-mode="light"] .code code { color: #143544; }
+html[data-mode="light"] .code-lang { color: var(--text-3); }
+
+/* ---------- 思考过程 / 错误 ---------- */
+html[data-mode="light"] .think { background: rgba(12, 28, 38, .04); border-color: rgba(12, 28, 38, .08); }
+html[data-mode="light"] .think-body { color: var(--text-2); }
+html[data-mode="light"] .err { background: rgba(217, 59, 52, .09); border-color: rgba(217, 59, 52, .32); color: #8d211c; }
+html[data-mode="light"] .mini { background: rgba(255, 255, 255, .7); border-color: rgba(12, 28, 38, .16); color: var(--text-2); }
+html[data-mode="light"] .mini:active { background: rgba(12, 28, 38, .08); color: var(--text-1); }
+
+/* ---------- 欢迎页 ---------- */
+html[data-mode="light"] .welcome h1 { text-shadow: none; }
+html[data-mode="light"] .welcome-mark svg { box-shadow: 0 16px 40px rgba(15, 40, 58, .2), inset 0 1px 0 rgba(255, 255, 255, .4); }
+html[data-mode="light"] .starter {
+  border-color: rgba(12, 28, 38, .11);
+  background-color: rgba(255, 255, 255, .74);
+  background-image:
+    radial-gradient(120% 80% at 50% -30%, rgba(255, 255, 255, .95), transparent 62%),
+    linear-gradient(160deg, rgba(255, 255, 255, .6), rgba(238, 245, 249, .5));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .95), 0 5px 16px rgba(15, 40, 58, .08);
+}
+html[data-mode="light"] .starter:active { background-color: rgba(255, 255, 255, .95); border-color: rgba(12, 28, 38, .2); }
+html[data-mode="light"] .starter .s-ico { border-color: rgba(12, 28, 38, .09); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9); }
+
+/* ---------- 输入区 ---------- */
+html[data-mode="light"] .composer { background-color: rgba(242, 246, 249, .86); }
+html[data-mode="light"] .composer::before { background: linear-gradient(to top, rgba(242, 246, 249, .8), transparent); }
+html[data-mode="light"] .composer-inner {
+  border-color: rgba(12, 28, 38, .13);
+  background-color: rgba(255, 255, 255, .84);
+  background-image:
+    radial-gradient(120% 80% at 50% -30%, rgba(255, 255, 255, .95), transparent 62%),
+    linear-gradient(165deg, rgba(255, 255, 255, .7), rgba(240, 246, 250, .5));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .95), 0 8px 24px rgba(15, 40, 58, .12);
+}
+html[data-mode="light"] .composer-inner:focus-within {
+  border-color: var(--accent-ring);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .95), 0 8px 24px rgba(15, 40, 58, .12), 0 0 0 3px var(--accent-soft-2);
+}
+html[data-mode="light"] #input { color: var(--text-1); }
+html[data-mode="light"] #input::placeholder { color: var(--text-3); }
+html[data-mode="light"] .attach {
+  border-color: rgba(12, 28, 38, .14);
+  background-color: rgba(255, 255, 255, .7);
+  background-image: linear-gradient(160deg, rgba(255, 255, 255, .9), transparent 62%);
+  color: var(--text-2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9);
+}
+html[data-mode="light"] .attach:active { background-color: rgba(12, 28, 38, .07); }
+
+/* ---------- 附件条 ---------- */
+html[data-mode="light"] .attachments {
+  border-color: rgba(12, 28, 38, .11);
+  background-color: rgba(255, 255, 255, .72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9);
+}
+html[data-mode="light"] .att { border-color: rgba(12, 28, 38, .13); background: var(--surface-2); }
+html[data-mode="light"] .att .kill { background: rgba(255, 255, 255, .88); color: var(--text-1); border-color: rgba(12, 28, 38, .18); }
+html[data-mode="light"] .att-tag { background: rgba(255, 255, 255, .88); color: var(--text-2); }
+
+/* ---------- 附件菜单 ---------- */
+html[data-mode="light"] .popmenu {
+  background-color: rgba(255, 255, 255, .92);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .95), 0 20px 50px rgba(15, 40, 58, .22);
+}
+html[data-mode="light"] .popmenu button:active { background: rgba(12, 28, 38, .07); }
+html[data-mode="light"] .pm-ico { border-color: rgba(12, 28, 38, .09); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9); }
+
+/* ---------- 面板 ---------- */
+html[data-mode="light"] .sheet { background: rgba(12, 28, 38, .34); }
+html[data-mode="light"] .sheet-card {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .95), 0 -18px 50px rgba(15, 40, 58, .22);
+}
+html[data-mode="light"] .grab { background: rgba(12, 28, 38, .22); box-shadow: none; }
+
+/* ---------- 表单与按钮 ---------- */
+html[data-mode="light"] .field input[type="password"],
+html[data-mode="light"] .field select {
+  border-color: rgba(12, 28, 38, .14);
+  background-color: rgba(255, 255, 255, .86);
+  background-image: linear-gradient(160deg, rgba(255, 255, 255, .9), transparent 60%);
+  color: var(--text-1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9);
+}
+html[data-mode="light"] .field select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b8798' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+}
+html[data-mode="light"] .field input[type="password"]:focus,
+html[data-mode="light"] .field select:focus {
+  border-color: var(--accent-ring);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9), 0 0 0 3px var(--accent-soft-2);
+}
+html[data-mode="light"] .btn {
+  border-color: rgba(12, 28, 38, .14);
+  background-color: rgba(255, 255, 255, .8);
+  background-image: linear-gradient(160deg, rgba(255, 255, 255, .9), transparent 62%);
+  color: var(--text-1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9);
+}
+html[data-mode="light"] .btn:active { background-color: rgba(12, 28, 38, .07); border-color: rgba(12, 28, 38, .2); }
+html[data-mode="light"] .btn.ghost { background-color: transparent; }
+html[data-mode="light"] .btn.danger { color: #a5291f; border-color: rgba(217, 59, 52, .36); }
+html[data-mode="light"] .perm-act { border-color: rgba(12, 28, 38, .14); background-color: rgba(255, 255, 255, .8); color: var(--text-1); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9); }
+html[data-mode="light"] .perm-act:active { background-color: rgba(12, 28, 38, .07); }
+html[data-mode="light"] .switch input { accent-color: var(--accent); }
+
+/* ---------- 历史 / 权限 ---------- */
+html[data-mode="light"] .hist-item {
+  border-color: rgba(12, 28, 38, .11);
+  background-color: rgba(255, 255, 255, .74);
+  background-image: linear-gradient(160deg, rgba(255, 255, 255, .8), transparent 62%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9);
+}
+html[data-mode="light"] .hist-item.active { background-color: rgba(255, 255, 255, .95); }
+html[data-mode="light"] .hist-del:active { background: rgba(217, 59, 52, .14); color: #a5291f; }
+html[data-mode="light"] .perm {
+  border-color: rgba(12, 28, 38, .11);
+  background-color: rgba(255, 255, 255, .74);
+  background-image: linear-gradient(160deg, rgba(255, 255, 255, .8), transparent 62%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9);
+}
+html[data-mode="light"] .perm-state.granted { color: #0f7f59; border-color: rgba(15, 155, 108, .4); background: rgba(15, 155, 108, .1); }
+html[data-mode="light"] .perm-state.denied { color: #a5291f; border-color: rgba(217, 59, 52, .4); background: rgba(217, 59, 52, .1); }
+html[data-mode="light"] .perm-state.prompt { color: #8a5800; border-color: rgba(181, 116, 4, .38); background: rgba(181, 116, 4, .1); }
+
+/* ---------- 拍照 / 文档预览 ---------- */
+html[data-mode="light"] .cam-wrap { border-color: rgba(12, 28, 38, .16); }
+html[data-mode="light"] .doc-preview {
+  background: #f6f9fc;
+  color: #143544;
+  border-color: rgba(12, 28, 38, .13);
+}
+
+/* ---------- 提示条 ---------- */
+html[data-mode="light"] .toast {
+  background-color: rgba(255, 255, 255, .95);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .95), 0 18px 44px rgba(15, 40, 58, .22);
+  color: var(--text-1);
+}
+
+/* ---------- 主题控件 ---------- */
+html[data-mode="light"] .swatch { border-color: rgba(12, 28, 38, .16); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6), 0 4px 12px rgba(15, 40, 58, .14); }
+html[data-mode="light"] .swatch.on { border-color: rgba(12, 28, 38, .7); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6), 0 0 0 3px var(--accent-soft-2), 0 4px 14px rgba(15, 40, 58, .16); }
+html[data-mode="light"] .mix {
+  border-color: rgba(12, 28, 38, .13);
+  background-color: rgba(255, 255, 255, .78);
+  background-image: linear-gradient(160deg, rgba(255, 255, 255, .85), transparent 62%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9);
+}
+html[data-mode="light"] .mix input[type="color"] { border-color: rgba(12, 28, 38, .2); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6); }
+html[data-mode="light"] .seg {
+  border-color: rgba(12, 28, 38, .13);
+  background-color: rgba(255, 255, 255, .74);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9);
+}
+html[data-mode="light"] .seg button:active { background: rgba(12, 28, 38, .07); }
+
+/* 浅色模式下玻璃仍贴在内容之上，模糊方向不变 */
+html[data-mode="light"] .avatar svg path,
+html[data-mode="light"] .brand-mark svg path,
+html[data-mode="light"] .welcome-mark svg path { fill: #ffffff; }
 
 @media (prefers-reduced-motion: reduce) {
   /* 必须显式列出伪元素：`*` 只匹配元素，匹配不到 ::before / ::after，
