@@ -1279,6 +1279,28 @@
   var input = $('#input');
   input.addEventListener('input', autoGrow);
 
+  /* 顶栏与输入区是固定层（消息从它们下面滚过，玻璃才模糊得到东西），
+   * 所以消息区需要按它们的实测高度留白。
+   * 输入框会随文字长高、附件条会突然出现，所以必须用 ResizeObserver 实时回填，
+   * 写死数值一定会错位。 */
+  (function syncDockMetrics() {
+    var bar = $('#topbar');
+    var dock = $('#composer');
+    function apply() {
+      var root = document.documentElement.style;
+      root.setProperty('--topbar-h', bar.offsetHeight + 'px');
+      root.setProperty('--dock-h', dock.offsetHeight + 'px');
+    }
+    apply();
+    if (window.ResizeObserver) {
+      var ro = new ResizeObserver(apply);
+      ro.observe(bar);
+      ro.observe(dock);
+    }
+    window.addEventListener('resize', apply);
+    window.addEventListener('orientationchange', function () { setTimeout(apply, 120); });
+  })();
+
   // 代码块复制：用事件委托而不是逐个绑定，
   // 这样流式输出过程中已经渲染出来的代码块也能立刻复制。
   $('#messages').addEventListener('click', function (e) {

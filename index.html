@@ -18,7 +18,15 @@
 </head>
 <body>
 
-<header class="topbar" id="topbar">
+<!-- 背景层：给玻璃提供可折射的内容。静态不动的，避免持续重算模糊层耗电 -->
+<div class="atmos" aria-hidden="true">
+  <span class="blob blob-a"></span>
+  <span class="blob blob-b"></span>
+  <span class="blob blob-c"></span>
+</div>
+
+<!-- 顶栏固定：消息从它下面滚过去，玻璃才模糊得到东西 -->
+<header class="topbar glass" id="topbar">
   <button class="icon-btn" id="btn-history" aria-label="历史会话" title="历史会话">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
   </button>
@@ -44,9 +52,8 @@
 
 <main id="messages" aria-live="polite"></main>
 
-<div class="attachments" id="attachments" hidden></div>
-
-<form class="composer" id="composer" autocomplete="off">
+<form class="composer glass" id="composer" autocomplete="off">
+  <div class="attachments" id="attachments" hidden></div>
   <div class="composer-inner" id="composer-inner">
     <button type="button" class="attach" id="btn-attach" aria-label="添加附件" title="添加附件">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
@@ -64,7 +71,7 @@
 <input type="file" id="file-photo" accept="image/*" multiple hidden>
 <input type="file" id="file-doc" multiple hidden>
 
-<div class="popmenu" id="attach-menu" hidden>
+<div class="popmenu glass" id="attach-menu" hidden>
   <button data-attach="camera"><span class="pm-ico"><svg viewBox="0 0 24 24"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.2"/></svg></span><span class="pm-copy"><b>拍照</b><small>拍文档、代码、白板直接提问</small></span></button>
   <button data-attach="photo"><span class="pm-ico"><svg viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="3"/><circle cx="8.5" cy="10" r="1.8"/><path d="M3.5 17l5-5 4 4 3-3 5 5"/></svg></span><span class="pm-copy"><b>从相册选择图片</b><small>支持多选，发送前自动压缩</small></span></button>
   <button data-attach="doc"><span class="pm-ico"><svg viewBox="0 0 24 24"><path d="M6 3h7l5 5v13H6z"/><path d="M13 3v5h5"/></svg></span><span class="pm-copy"><b>选择文档 / 代码文件</b><small>txt、代码、docx、pdf</small></span></button>
@@ -73,7 +80,7 @@
 
 <!-- 拍照 -->
 <div class="sheet" id="sheet-camera" hidden>
-  <div class="sheet-card" role="dialog" aria-modal="true" aria-labelledby="camera-title">
+  <div class="sheet-card glass" role="dialog" aria-modal="true" aria-labelledby="camera-title">
     <span class="grab" aria-hidden="true"></span>
     <div class="sheet-head"><h2 id="camera-title">拍照</h2><button class="icon-btn" data-close="sheet-camera" aria-label="关闭"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <div class="sheet-body">
@@ -89,7 +96,7 @@
 
 <!-- 文档解析预览：发送前必须让用户看到实际内容，乱码一眼可见 -->
 <div class="sheet" id="sheet-doc" hidden>
-  <div class="sheet-card" role="dialog" aria-modal="true" aria-labelledby="doc-title">
+  <div class="sheet-card glass" role="dialog" aria-modal="true" aria-labelledby="doc-title">
     <span class="grab" aria-hidden="true"></span>
     <div class="sheet-head"><h2 id="doc-title">文档内容预览</h2><button class="icon-btn" data-close="sheet-doc" aria-label="关闭"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <div class="sheet-body">
@@ -104,7 +111,7 @@
 </div>
 
 <div class="sheet" id="sheet-settings" hidden>
-  <div class="sheet-card" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+  <div class="sheet-card glass" role="dialog" aria-modal="true" aria-labelledby="settings-title">
     <span class="grab" aria-hidden="true"></span>
     <div class="sheet-head"><h2 id="settings-title">设置</h2><button class="icon-btn" data-close="sheet-settings" aria-label="关闭"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <div class="sheet-body">
@@ -154,14 +161,14 @@
 </div>
 
 <div class="sheet" id="sheet-history" hidden>
-  <div class="sheet-card" role="dialog" aria-modal="true" aria-labelledby="history-title">
+  <div class="sheet-card glass" role="dialog" aria-modal="true" aria-labelledby="history-title">
     <span class="grab" aria-hidden="true"></span>
     <div class="sheet-head"><h2 id="history-title">历史会话</h2><button class="icon-btn" data-close="sheet-history" aria-label="关闭"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <div class="sheet-body" id="history-list"></div>
   </div>
 </div>
 
-<div class="toast" id="toast" hidden></div>
+<div class="toast glass" id="toast" hidden></div>
 
 <script src="app.js"></script>
 </body>
