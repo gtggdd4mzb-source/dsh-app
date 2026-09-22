@@ -1,7 +1,13 @@
 /* DSH service worker — 只缓存应用外壳，绝不缓存 API 响应或用户数据。
- * 离线时仍可打开界面；真正的对话需要联网（模型在云端）。
+ *
+ * 两个必须注意的点：
+ * 1. 跨域请求（api.deepseek.com）一律直连，不拦截、不缓存。
+ * 2. 静态资源用 stale-while-revalidate：先返回缓存保证秒开，同时后台拉新版本。
+ *    否则一旦改了 app.js 而 sw.js 内容没变，浏览器就不会重装 SW，
+ *    用户会被 cache-first 永久锁在旧版本上。
+ * 改任何应用文件时，请同时把下面的 CACHE 版本号 +1。
  */
-const CACHE = 'dsh-shell-v3';
+const CACHE = 'dsh-shell-v4';
 const SHELL = [
   './',
   './index.html',
@@ -33,10 +39,10 @@ self.addEventListener('fetch', event => {
 
   const url = new URL(req.url);
 
-  // 任何跨域请求（api.deepseek.com 等）一律直连，绝不缓存、绝不拦截。
+  // 跨域（API、CDN 等）交给浏览器默认行为，绝不缓存
   if (url.origin !== self.location.origin) return;
 
-  // 同源导航：网络优先，拿到新部署；离线时回落到缓存的外壳。
+  // 同源导航：网络优先，离线回落缓存外壳
   if (req.mode === 'navigate') {
     event.respondWith((async () => {
       try {
@@ -52,19 +58,21 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // 同源静态资源：缓存优先，并在后台补缓存。
+  // 同源静态资源：立即给缓存，同时后台更新
   event.respondWith((async () => {
-    const cached = await caches.match(req, { ignoreSearch: true });
-    if (cached) return cached;
-    try {
-      const res = await fetch(req);
-      if (res && res.status === 200 && res.type === 'basic') {
-        const cache = await caches.open(CACHE);
-        cache.put(req, res.clone());
-      }
+    const cache = await caches.open(CACHE);
+    const cached = await cache.match(req, { ignoreSearch: true });
+
+    const revalidate = fetch(req).then(res => {
+      if (res && res.status === 200 && res.type === 'basic') cache.put(req, res.clone());
       return res;
-    } catch (_) {
-      return Response.error();
+    }).catch(() => null);
+
+    if (cached) {
+      event.waitUntil(revalidate);
+      return cached;
     }
+    const fresh = await revalidate;
+    return fresh || Response.error();
   })());
 });

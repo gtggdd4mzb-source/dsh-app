@@ -9,7 +9,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="DSH">
-<meta name="description" content="DSH 聊天客户端 —— 直连 DeepSeek API，可添加到 iPhone 主屏离线启动。">
+<meta name="description" content="DSH —— 直连 DeepSeek API，支持看图、读文档、拍照提问，可添加到 iPhone 主屏。">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
@@ -46,8 +46,13 @@
 
 <div class="scroll-anchor" id="scroll-anchor"></div>
 
+<div class="attachments" id="attachments" hidden></div>
+
 <form class="composer" id="composer" autocomplete="off">
   <div class="composer-inner">
+    <button type="button" class="attach" id="btn-attach" aria-label="添加附件" title="添加附件">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
     <textarea id="input" rows="1" placeholder="发消息…" enterkeyhint="send" aria-label="消息输入框"></textarea>
     <button type="submit" class="send" id="btn-send" aria-label="发送">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12L4 4l6 8-6 8z"/></svg>
@@ -57,6 +62,46 @@
     </button>
   </div>
 </form>
+
+<input type="file" id="file-photo" accept="image/*" multiple hidden>
+<input type="file" id="file-doc" multiple hidden>
+
+<div class="popmenu" id="attach-menu" hidden>
+  <button data-attach="camera">拍照</button>
+  <button data-attach="photo">从相册选择图片</button>
+  <button data-attach="doc">选择文档 / 代码文件</button>
+  <button data-attach="cancel" class="muted">取消</button>
+</div>
+
+<!-- 拍照 -->
+<div class="sheet" id="sheet-camera" hidden>
+  <div class="sheet-card" role="dialog" aria-modal="true" aria-labelledby="camera-title">
+    <div class="sheet-head"><h2 id="camera-title">拍照</h2><button class="icon-btn" data-close="sheet-camera" aria-label="关闭">✕</button></div>
+    <div class="sheet-body">
+      <div class="cam-wrap"><video id="camera-video" playsinline autoplay muted></video></div>
+      <div class="row-actions">
+        <button class="btn" id="btn-shutter">拍摄并添加到对话</button>
+        <button class="btn ghost" id="btn-camera-flip">切换镜头</button>
+      </div>
+      <p class="status" id="camera-status"></p>
+    </div>
+  </div>
+</div>
+
+<!-- 文档解析预览：发送前必须让用户看到实际内容，乱码一眼可见 -->
+<div class="sheet" id="sheet-doc" hidden>
+  <div class="sheet-card" role="dialog" aria-modal="true" aria-labelledby="doc-title">
+    <div class="sheet-head"><h2 id="doc-title">文档内容预览</h2><button class="icon-btn" data-close="sheet-doc" aria-label="关闭">✕</button></div>
+    <div class="sheet-body">
+      <p class="status" id="doc-meta"></p>
+      <pre class="doc-preview" id="doc-text"></pre>
+      <div class="row-actions">
+        <button class="btn" id="btn-doc-confirm">确认添加到对话</button>
+        <button class="btn ghost" id="btn-doc-cancel">放弃</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div class="sheet" id="sheet-settings" hidden>
   <div class="sheet-card" role="dialog" aria-modal="true" aria-labelledby="settings-title">
@@ -73,6 +118,7 @@
           <option value="deepseek-flash">deepseek-flash · 快，1M 上下文，支持看图</option>
           <option value="deepseek-v4-pro">deepseek-v4-pro · 更强推理，不支持看图</option>
         </select>
+        <small id="vision-note">只有 deepseek-flash 能看图；它被选中时附件里的图片才会发送。</small>
       </label>
       <div class="field">
         <span class="field-label">深度思考</span>
@@ -87,6 +133,13 @@
         </select>
         <small>思考模式下 temperature 等采样参数不生效，因此本应用不提供这些设置。</small>
       </label>
+
+      <div class="field">
+        <span class="field-label">权限</span>
+        <div class="perm-list" id="perm-list"></div>
+        <small>这里是网页能拿到的<b>真实</b>权限。浏览器不可能给网页系统级的"完全权限"——没有文件系统、不能执行命令、读不到其他 App 的数据。需要真正的全权限 agent 能力，只能让手机远程连接你电脑上运行的 DSH。</small>
+      </div>
+
       <div class="row-actions">
         <button class="btn ghost" id="btn-test">测试连接</button>
         <button class="btn ghost danger" id="btn-clear">清空本地数据</button>

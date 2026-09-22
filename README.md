@@ -1,50 +1,101 @@
 # DSH
 
-一个**直连 DeepSeek API 的聊天客户端**，纯静态、无后端、无构建步骤。可以部署到 GitHub Pages，然后在 iPhone 上「添加到主屏幕」，像普通 App 一样全屏启动。
+一个**直连 DeepSeek API 的聊天客户端**，纯静态、无后端、无构建步骤。可部署到 GitHub Pages，在 iPhone 上用 Safari「添加到主屏幕」后像普通 App 一样全屏启动。
 
 ## 功能
 
-- 多轮对话，会话历史保存在本机（localStorage）
-- **流式输出**：逐字返回，不是等全部生成完才显示
-- **深度思考**：单独展示模型的推理过程（`reasoning_content`），可折叠
-- 两个模型可切换：`deepseek-flash`、`deepseek-v4-pro`
+- 多轮对话，会话历史保存在本机
+- **流式输出**：逐字返回
+- **深度思考**：单独折叠展示模型推理过程（`reasoning_content`）
+- **图片输入**：从相册选图或直接拍照，发送前自动降采样
+- **文档读取**：读取 txt / 代码 / docx / pdf，提取文字后作为上下文
+- **把结果存回手机**：AI 生成的代码可一键走系统分享面板「存储到文件」
 - 停止生成、复制回复、删除会话
-- 离线可打开界面（对话本身需要联网，因为模型在云端）
+- 模型切换：`deepseek-flash`、`deepseek-v4-pro`
+- 离线可打开界面（对话本身需要联网）
 
 ## 部署到 GitHub Pages
 
 1. 把这些文件提交到仓库根目录（分支 `main`）。
-2. 打开 **Settings → Pages**。
-3. **Source** 选 `Deploy from a branch`，**Branch** 选 `main`，目录选 `/ (root)`，然后 **Save**。
-4. 等构建完成，打开 `https://<用户名>.github.io/<仓库名>/`。
+2. **Settings → Pages** → Source 选 `Deploy from a branch` → Branch 选 `main` → 目录 `/ (root)` → Save。
+3. 等构建完成后打开 `https://<用户名>.github.io/<仓库名>/`。
 
 ## 在 iPhone 上安装
 
-1. 用 **Safari** 打开上面的网址（必须 Safari，Chrome 无法添加到主屏）。
-2. 点 **分享 → 添加到主屏幕**。
-3. 从主屏启动，全屏运行，无地址栏。
+1. 用 **Safari** 打开该网址（必须 Safari，Chrome 无法添加到主屏）。
+2. **分享 → 添加到主屏幕**。
+3. 从主屏启动，全屏运行。
 
 ## 填入 API Key（必做）
 
-应用启动后点右上角设置图标，填入 DeepSeek API Key（[在这里创建](https://platform.deepseek.com/api_keys)），再点「测试连接」确认可用。
+点右上角设置图标，填入 DeepSeek API Key（[在此创建](https://platform.deepseek.com/api_keys)），再点「测试连接」。
 
-**关于 Key 的安全性，请务必注意：**
+**关于 Key 的安全性：**
 
-- 本仓库是**公开**的。Key 只保存在你手机浏览器的 localStorage 里，**不会上传到任何服务器，也不会写进任何文件**。
-- 因此**绝对不要**把 Key 写进 `app.js`、`README.md` 或任何提交的文件里——一提交就等于公开泄露，任何人都能拿去消耗你的额度。
+- 本仓库是**公开**的。Key 只存在你手机浏览器的 localStorage 里，**不会上传，也不会写进任何文件**。
+- 因此**绝对不要**把 Key 写进 `app.js`、`README.md` 或任何提交的文件里——一提交就等于公开泄露。
 - 应用不经过任何第三方服务器：浏览器直接请求 `https://api.deepseek.com`。
-- 换手机或清除浏览器数据后需要重新填入。
 
-## 模型与参数说明
+## 图片输入
+
+支持三种来源：**拍照**、**相册**、以及截图后从相册选。iOS 的 HEIC 照片会在本地转成 JPEG。
+
+**发送前会在本机降采样到长边 1568px**，原因有两个，都是硬限制：
+
+- 接口要求单图最长边不超过 8192px，且请求体上限 **48 MiB**；iPhone 原图 3–5 MB，base64 后膨胀约 33%，几张原图就会把请求撑爆。
+- 服务端反正会把图片压到约 1300×1300（每图最多计 1024 token），发原图纯属浪费流量和 token。
+
+实测：一张 2400×1600 / 1.2 MB 的图，发出时是 1568×1045 / 57 KB，整条请求体 76 KB。
+
+**只有 `deepseek-flash` 支持图片**。选中 `deepseek-v4-pro` 时若已附图片，应用会提示并询问是否切换模型。
+
+## 文档读取
+
+点输入框左侧的 `+` → 「选择文档 / 代码文件」，通过 iOS「文件」App 从 iCloud Drive 或「我的 iPhone」中选取。
+
+| 类型 | 支持情况 |
+|---|---|
+| txt / md / json / csv / 各类代码文件 | ✅ 直接读取 |
+| **.docx** | ✅ 用 `DecompressionStream` 解 ZIP 读 `word/document.xml`，**零外部依赖** |
+| **.pdf** | ⚠️ 简易提取（解 FlateDecode 流抓 Tj/TJ 字符串）。简单 PDF 可用；**使用中文 CID 字体的 PDF 常提不出干净文本** |
+| 其他二进制格式 | ❌ 会明确提示不支持 |
+
+**解析结果一律先弹出预览让你确认**，不会偷偷把内容发出去。提取质量差时预览里会标出 ⚠️ 和具体原因。如果 PDF 预览是乱码，**改用截图 → 相册选图**这条路，靠视觉能力读，比提取文本可靠得多。
+
+## 把生成的代码存回手机
+
+浏览器**不能写手机的文件系统**。唯一的出口是系统分享面板：AI 回复里的代码块可以点「存为文件」，走 `navigator.share({files})`，在分享面板里选「存储到文件」即可存进「文件」App。若浏览器不支持分享文件，则退化为下载。
+
+回复里有多个代码块时会让你选序号，不会替你猜。
+
+## 权限：真实能力与硬边界
+
+设置面板里的「权限」区展示的是**浏览器真实权限状态**（相机 / 麦克风 / 通知 / 持久存储），可逐个申请。
+
+**这里没有、也不会有"完全权限"开关**——因为网页应用运行在浏览器沙箱里，给了也拿不到东西：
+
+| 你想要的能力 | 网页应用能否做到 |
+|---|---|
+| 读取你**主动选中**的文件 | ✅ 可以 |
+| 读取**任意**手机文件（不用你选） | ❌ 沙箱禁止 |
+| 把文件写回手机文件系统 | ❌ 浏览器不允许（只能走分享面板） |
+| 执行命令 / 跑 shell | ❌ 没有 |
+| 在手机上运行代码 | ❌ 无解释器（WASM 除外，且读不到真实文件） |
+| 控制手机 UI（computer-use） | ❌ 需要原生辅助功能 API |
+| 后台常驻、开机自启 | ❌ 网页做不到 |
+
+**需要真正的全权限 agent / computer-use，唯一的路是让手机远程连接你电脑上运行的 DSH**——工具在电脑上执行，手机只当屏幕。注意 DSH 出于安全考虑**刻意禁止**了 `--host 0.0.0.0`（会向网络暴露远程代码执行），官方留下的口子是 loopback 绑定 + TLS 反向代理或 tunnel（`--trusted-host` 就是为此设计的），例如 Tailscale。
+
+## 模型与参数
 
 | 模型 | 特点 |
 |---|---|
-| `deepseek-flash` | DeepSeek-V4.1-Flash，快，1M 上下文，支持看图 |
-| `deepseek-v4-pro` | DeepSeek-V4-Pro，推理更强，不支持看图 |
+| `deepseek-flash` | DeepSeek-V4.1-Flash，快，1M 上下文，**支持图片** |
+| `deepseek-v4-pro` | DeepSeek-V4-Pro，推理更强，**不支持图片** |
 
-思考模式通过 `thinking: {"type": "enabled" | "disabled"}` 控制，强度用 `reasoning_effort`（`low` / `high` / `max`），默认开启且为 `high`。
+思考模式：`thinking: {"type": "enabled" | "disabled"}`，强度用 `reasoning_effort`（`low` / `high` / `max`），默认开启且为 `high`。
 
-思考模式下 `temperature`、`presence_penalty`、`frequency_penalty` 均**不生效**（发了也会被静默忽略），所以本应用不提供这些设置，以免造成"调了没用"的误解。
+思考模式下 `temperature`、`presence_penalty`、`frequency_penalty` 均**不生效**（发了也会被静默忽略），所以本应用不提供这些设置。
 
 ## 文件说明
 
@@ -52,15 +103,18 @@
 |---|---|
 | `index.html` | 页面结构 |
 | `styles.css` | 样式（含 iOS 安全区适配） |
-| `app.js` | 对话逻辑、SSE 流式解析、本地存储 |
+| `app.js` | 对话逻辑、SSE 流式解析、图片降采样、文档解析、本地存储 |
 | `sw.js` | Service Worker：只缓存应用外壳，**不缓存 API 响应** |
-| `manifest.webmanifest` | PWA 清单，决定添加到主屏后的表现 |
+| `manifest.webmanifest` | PWA 清单 |
 | `apple-touch-icon.png` | iOS 主屏图标（180×180 PNG，iOS 不支持 SVG 图标） |
-| `icon-192.png` / `icon-512.png` | 其他平台/尺寸的图标 |
-| `.nojekyll` | 让 GitHub Pages 原样输出文件，不做 Jekyll 处理 |
+| `icon-192.png` / `icon-512.png` | 其他尺寸图标 |
+| `.nojekyll` | 让 GitHub Pages 原样输出文件 |
 
 ## 已知限制
 
-- 没有工具能力：不能读写你的文件、不能执行命令——这些必须在你的电脑上运行。本应用只是手机端聊天界面。
-- 不支持图片上传（`deepseek-flash` 支持视觉，但本应用尚未实现附件上传）。
-- 会话数量多或单条回复很长时，localStorage 有容量上限（约 5MB），届时需清理旧会话。
+- **没有工具能力**：不能读写你的文件、不能执行命令。本应用只是手机端聊天界面。
+- **pdf 提取对中文 PDF 不可靠**，见上文，建议改走截图 + 视觉。
+- **文档一次处理一个**（会提示），不支持批量。
+- 图片与文档正文存在 IndexedDB，localStorage 只存引用；但会话很多时仍建议清理旧会话。
+- 语音输入尚未接入（麦克风权限已可申请，但没有接语音识别）。
+- **改任何应用文件后，必须把 `sw.js` 里的 `CACHE` 版本号 +1**，否则老用户会被 Service Worker 的缓存锁在旧版本上。
