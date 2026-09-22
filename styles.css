@@ -1039,8 +1039,10 @@ body {
    主题：品牌图形跟随配色
    SVG 的 fill 是表现属性，CSS 优先级更高，所以能在这里覆盖
    ============================================================ */
-.brand-mark svg rect, .avatar svg rect, .welcome-mark svg rect { fill: var(--accent-deep); }
-.brand-mark svg path, .avatar svg path, .welcome-mark svg path { fill: #fff; }
+/* 鲸鱼标识：底板跟随主题色，鲸身恒为白色。
+   鲸鱼的眼睛与下颌线是 evenodd 挖空，所以自动透出底板色。 */
+.mark-tile { fill: var(--accent-deep); }
+.mark-ink { fill: #ffffff; }
 
 /* ============================================================
    色板
@@ -1203,7 +1205,7 @@ body {
    .starter 等已经定义好的 `transform .12s`，把按压缩放的跟手反馈变成迟钝动画。
    渐变背景（background-image）在 CSS 里本来就不参与过渡，所以只处理
    fill / background-color / border-color 这些真能过渡的属性。 */
-.brand-mark svg rect, .avatar svg rect, .welcome-mark svg rect { transition: fill .38s cubic-bezier(.2, .8, .3, 1); }
+.mark-tile { transition: fill .38s cubic-bezier(.2, .8, .3, 1); }
 .composer, .bubble, .perm, .code { transition: background-color .3s cubic-bezier(.2, .8, .3, 1), border-color .3s cubic-bezier(.2, .8, .3, 1); }
 
 /* ============================================================
@@ -1486,9 +1488,7 @@ html[data-mode="light"] .seg {
 html[data-mode="light"] .seg button:active { background: rgba(12, 28, 38, .07); }
 
 /* 浅色模式下玻璃仍贴在内容之上，模糊方向不变 */
-html[data-mode="light"] .avatar svg path,
-html[data-mode="light"] .brand-mark svg path,
-html[data-mode="light"] .welcome-mark svg path { fill: #ffffff; }
+/* 鲸身在任何模式下都是白的（底板上永远放白鲸），无需按模式覆盖 */
 
 @media (prefers-reduced-motion: reduce) {
   /* 必须显式列出伪元素：`*` 只匹配元素，匹配不到 ::before / ::after，

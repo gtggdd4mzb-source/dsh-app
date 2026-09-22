@@ -1,6 +1,6 @@
 ﻿/* DSH service worker 鈥?鍙紦瀛樺簲鐢ㄥ澹筹紝缁濅笉缂撳瓨 API 鍝嶅簲鎴栫敤鎴锋暟鎹€? *
  * 涓や釜蹇呴』娉ㄦ剰鐨勭偣锛? * 1. 璺ㄥ煙璇锋眰锛坅pi.deepseek.com锛変竴寰嬬洿杩烇紝涓嶆嫤鎴€佷笉缂撳瓨銆? * 2. 闈欐€佽祫婧愮敤 stale-while-revalidate锛氬厛杩斿洖缂撳瓨淇濊瘉绉掑紑锛屽悓鏃跺悗鍙版媺鏂扮増鏈€? *    鍚﹀垯涓€鏃︽敼浜?app.js 鑰?sw.js 鍐呭娌″彉锛屾祻瑙堝櫒灏变笉浼氶噸瑁?SW锛? *    鐢ㄦ埛浼氳 cache-first 姘镐箙閿佸湪鏃х増鏈笂銆? * 鏀逛换浣曞簲鐢ㄦ枃浠舵椂锛岃鍚屾椂鎶婁笅闈㈢殑 CACHE 鐗堟湰鍙?+1銆? */
-const CACHE = 'dsh-shell-v13';
+const CACHE = 'dsh-shell-v14';
 const SHELL = [
   './',
   './index.html',

@@ -515,8 +515,24 @@
     }).join('');
   }
 
-  var MARK_SVG = '<svg viewBox="0 0 256 256"><rect width="256" height="256" rx="64" fill="#0b898d"/>' +
-    '<path d="M91 133c0-27 17-47 40-47 22 0 34 14 34 32 0 23-17 35-38 35h-9v25h-27zm27-4h7c9 0 14-4 14-12 0-7-5-11-13-11h-8z" fill="#fff"/></svg>';
+  /* 鲸鱼标识。挖空的眼睛与下颌线能透出底板色，所以自动跟随主题。
+   * 小尺寸（顶栏 26px / 头像 26px）只保留身体，喷水太细会糊成一团；
+   * 大尺寸（欢迎页 84px）才带上喷水。 */
+  var WHALE_INK =
+    '<ellipse cx="118" cy="188" rx="27" ry="12.5" transform="rotate(42 118 188)"/>' +
+    '<path fill-rule="evenodd" d="M34 158C28 122 58 94 102 90C136 86 160 98 174 116C178 122 181 128 182 133C188 116 206 102 226 98C236 96 238 106 229 111C221 116 216 127 214 136C217 145 221 155 228 161C236 168 231 176 221 172C204 166 188 155 182 147C178 170 156 186 110 188C62 190 34 180 34 158ZM68 136A6 6 0 1 1 80 136A6 6 0 1 1 68 136ZM42 168C62 178 88 182 114 178C96 188 64 188 42 168Z"/>';
+  var WHALE_SPRAY =
+    '<circle cx="104" cy="40" r="5.5"/><circle cx="93" cy="52" r="4.4"/>' +
+    '<circle cx="117" cy="54" r="4.2"/><circle cx="84" cy="66" r="3.4"/>' +
+    '<circle cx="126" cy="68" r="3"/>';
+
+  function whaleSvg(withSpray) {
+    return '<svg viewBox="0 0 256 256">' +
+      '<rect class="mark-tile" width="256" height="256" rx="64"/>' +
+      '<g class="mark-ink">' + (withSpray ? WHALE_SPRAY : '') + WHALE_INK + '</g></svg>';
+  }
+
+  var MARK_SVG = whaleSvg(false);
 
   var DOC_ICON = '<span class="bd-ico"><svg viewBox="0 0 24 24"><path d="M6 3h7l5 5v13H6z"/><path d="M13 3v5h5"/></svg></span>';
 
@@ -581,7 +597,7 @@
           p: '我接下来会附上文档。请提炼要点，并列出关键结论。' }
       ];
       welcomeNode.innerHTML =
-        '<div class="welcome-mark" aria-hidden="true">' + MARK_SVG + '</div>' +
+        '<div class="welcome-mark" aria-hidden="true">' + whaleSvg(true) + '</div>' +
         '<h1>DSH</h1><p class="sub" id="welcome-hint"></p>' +
         '<div class="starters" id="starters" hidden>' +
         starters.map(function (s) {
