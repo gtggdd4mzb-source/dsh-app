@@ -1,6 +1,8 @@
-/* DSH PWA service worker — offline-first with safe updates. */
-const CACHE = 'dsh-pwa-v2';
-const ASSETS = [
+/* DSH service worker — 只缓存应用外壳，绝不缓存 API 响应或用户数据。
+ * 离线时仍可打开界面；真正的对话需要联网（模型在云端）。
+ */
+const CACHE = 'dsh-shell-v3';
+const SHELL = [
   './',
   './index.html',
   './styles.css',
@@ -14,9 +16,7 @@ const ASSETS = [
 
 self.addEventListener('install', event => {
   self.skipWaiting();
-  event.waitUntil(
-    caches.open(CACHE).then(cache => cache.addAll(ASSETS))
-  );
+  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)));
 });
 
 self.addEventListener('activate', event => {
@@ -31,7 +31,12 @@ self.addEventListener('fetch', event => {
   const req = event.request;
   if (req.method !== 'GET') return;
 
-  // Navigations: network-first so a new deploy is picked up, cache as offline fallback.
+  const url = new URL(req.url);
+
+  // 任何跨域请求（api.deepseek.com 等）一律直连，绝不缓存、绝不拦截。
+  if (url.origin !== self.location.origin) return;
+
+  // 同源导航：网络优先，拿到新部署；离线时回落到缓存的外壳。
   if (req.mode === 'navigate') {
     event.respondWith((async () => {
       try {
@@ -47,7 +52,7 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Static assets: cache-first, then fill the cache from the network.
+  // 同源静态资源：缓存优先，并在后台补缓存。
   event.respondWith((async () => {
     const cached = await caches.match(req, { ignoreSearch: true });
     if (cached) return cached;

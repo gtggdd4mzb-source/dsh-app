@@ -1,0 +1,9 @@
+﻿# 敏感文件：本应用把 API Key 存在浏览器 localStorage，绝不写入文件。
+# 这些规则只是防止误提交。
+.env
+.env.*
+*.key
+key.txt
+credentials*.json
+.DS_Store
+Thumbs.db
